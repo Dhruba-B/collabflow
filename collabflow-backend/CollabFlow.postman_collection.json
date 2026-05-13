@@ -1,0 +1,799 @@
+{
+  "info": {
+    "name": "CollabFlow API",
+    "description": "Postman collection for testing the CollabFlow Express/Prisma backend APIs. Protected routes use a bearer token stored as `jwtToken` after login.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000",
+      "type": "string"
+    },
+    {
+      "key": "jwtToken",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "userName",
+      "value": "CollabFlow Tester",
+      "type": "string"
+    },
+    {
+      "key": "userEmail",
+      "value": "tester@example.com",
+      "type": "string"
+    },
+    {
+      "key": "userPassword",
+      "value": "password123",
+      "type": "string"
+    },
+    {
+      "key": "workspaceId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "boardId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "columnId",
+      "value": "1",
+      "type": "string"
+    },
+    {
+      "key": "targetColumnId",
+      "value": "2",
+      "type": "string"
+    },
+    {
+      "key": "taskId",
+      "value": "1",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health",
+      "description": "Public root endpoint for checking whether the API is running.",
+      "item": [
+        {
+          "name": "API Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "Checks the public root route and confirms the CollabFlow API is reachable.",
+            "url": {
+              "raw": "{{baseUrl}}/",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                ""
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auth",
+      "description": "Authentication APIs for registering and logging in users.",
+      "item": [
+        {
+          "name": "Register User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('register returns success response', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201, 400]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.token) {",
+                  "  pm.environment.set('jwtToken', json.data.token);",
+                  "  pm.collectionVariables.set('jwtToken', json.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Creates a new user account. If registration succeeds, the returned JWT is stored as `jwtToken`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"{{userName}}\",\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/register",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "register"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Login User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('login returns a JWT token', function () {",
+                  "  pm.response.to.have.status(200);",
+                  "  const json = pm.response.json();",
+                  "  pm.expect(json.data.token).to.be.a('string').and.not.empty;",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.token) {",
+                  "  pm.environment.set('jwtToken', json.data.token);",
+                  "  pm.collectionVariables.set('jwtToken', json.data.token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Authenticates an existing user and automatically stores the returned JWT as `jwtToken` for protected routes.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{userEmail}}\",\n  \"password\": \"{{userPassword}}\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "auth",
+                "login"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Workspace",
+      "description": "Workspace APIs. All requests require bearer authentication.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{jwtToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Create Workspace",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('workspace created', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.workspace) {",
+                  "  pm.environment.set('workspaceId', json.data.workspace.id);",
+                  "  pm.collectionVariables.set('workspaceId', String(json.data.workspace.id));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Creates a workspace owned by the authenticated user and stores `workspaceId` from the response.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Product Workspace\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get My Workspaces",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "Returns all workspaces owned by the authenticated user.",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Single Workspace",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "Returns a single workspace by `workspaceId` if it belongs to the authenticated user.",
+            "url": {
+              "raw": "{{baseUrl}}/api/workspaces/{{workspaceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "workspaces",
+                "{{workspaceId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Board",
+      "description": "Board APIs. Boards belong to workspaces owned by the authenticated user.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{jwtToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Create Board",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('board created', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.board) {",
+                  "  pm.environment.set('boardId', json.data.board.id);",
+                  "  pm.collectionVariables.set('boardId', String(json.data.board.id));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Creates a board inside the workspace identified by `workspaceId` and stores `boardId` from the response.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Sprint Board\",\n  \"workspaceId\": {{workspaceId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/boards",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "boards"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Boards By Workspace",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "Returns all boards for the workspace identified by `workspaceId`.",
+            "url": {
+              "raw": "{{baseUrl}}/api/boards/workspace/{{workspaceId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "boards",
+                "workspace",
+                "{{workspaceId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Single Board",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "Returns the board identified by `boardId` if it belongs to the authenticated user's workspace.",
+            "url": {
+              "raw": "{{baseUrl}}/api/boards/{{boardId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "boards",
+                "{{boardId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Board",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Updates the name of the board identified by `boardId`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Updated Sprint Board\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/boards/{{boardId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "boards",
+                "{{boardId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Board",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "description": "Deletes the board identified by `boardId`, including its columns and tasks.",
+            "url": {
+              "raw": "{{baseUrl}}/api/boards/{{boardId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "boards",
+                "{{boardId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Column",
+      "description": "Column APIs. Columns belong to boards and maintain ordered positions.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{jwtToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Create Column",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('column created', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.column) {",
+                  "  if (!pm.environment.get('columnId')) {",
+                  "    pm.environment.set('columnId', json.data.column.id);",
+                  "    pm.collectionVariables.set('columnId', String(json.data.column.id));",
+                  "  } else {",
+                  "    pm.environment.set('targetColumnId', json.data.column.id);",
+                  "    pm.collectionVariables.set('targetColumnId', String(json.data.column.id));",
+                  "  }",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Creates a column at the end of the board identified by `boardId`. Run this twice to populate `columnId` and `targetColumnId` for move tests.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Todo\",\n  \"boardId\": {{boardId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/columns",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "columns"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Columns By Board",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "Returns ordered columns for the board identified by `boardId`.",
+            "url": {
+              "raw": "{{baseUrl}}/api/columns/board/{{boardId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "columns",
+                "board",
+                "{{boardId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Column",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Updates the name of the column identified by `columnId`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"In Progress\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/columns/{{columnId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "columns",
+                "{{columnId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reorder Columns",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Updates column positions transactionally. All columns in the payload must belong to the same board.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"columns\": [\n    { \"id\": {{columnId}}, \"position\": 1 },\n    { \"id\": {{targetColumnId}}, \"position\": 2 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/columns/reorder",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "columns",
+                "reorder"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Column",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "description": "Deletes the column identified by `columnId`, removes its tasks, and compacts remaining column positions.",
+            "url": {
+              "raw": "{{baseUrl}}/api/columns/{{columnId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "columns",
+                "{{columnId}}"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Task",
+      "description": "Task APIs. Tasks belong to columns and support ordered drag/drop movement.",
+      "auth": {
+        "type": "bearer",
+        "bearer": [
+          {
+            "key": "token",
+            "value": "{{jwtToken}}",
+            "type": "string"
+          }
+        ]
+      },
+      "item": [
+        {
+          "name": "Create Task",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('task created', function () {",
+                  "  pm.expect(pm.response.code).to.be.oneOf([200, 201]);",
+                  "});",
+                  "",
+                  "const json = pm.response.json();",
+                  "if (json && json.data && json.data.task) {",
+                  "  pm.environment.set('taskId', json.data.task.id);",
+                  "  pm.collectionVariables.set('taskId', String(json.data.task.id));",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Creates a task at the end of the column identified by `columnId` and stores `taskId` from the response.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Design API collection\",\n  \"description\": \"Create complete Postman coverage for the backend.\",\n  \"columnId\": {{columnId}}\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Tasks By Column",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "Returns ordered tasks for the column identified by `columnId`.",
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/column/{{columnId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "column",
+                "{{columnId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Get Single Task",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "description": "Returns the task identified by `taskId` if it belongs to the authenticated user's workspace.",
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{taskId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Update Task",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Updates task fields for the task identified by `taskId`.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Design and test API collection\",\n  \"description\": \"Updated task description.\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{taskId}}"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Move Task",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Moves a task from `sourceColumnId` to `targetColumnId` at a zero-based insertion position.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"taskId\": {{taskId}},\n  \"sourceColumnId\": {{columnId}},\n  \"targetColumnId\": {{targetColumnId}},\n  \"position\": 0\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/move",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "move"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Reorder Tasks",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "description": "Updates task positions transactionally. All tasks in the payload must belong to the same column.",
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"tasks\": [\n    { \"id\": {{taskId}}, \"position\": 1 }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/reorder",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "reorder"
+              ]
+            }
+          }
+        },
+        {
+          "name": "Delete Task",
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "description": "Deletes the task identified by `taskId` and compacts remaining task positions in its column.",
+            "url": {
+              "raw": "{{baseUrl}}/api/tasks/{{taskId}}",
+              "host": [
+                "{{baseUrl}}"
+              ],
+              "path": [
+                "api",
+                "tasks",
+                "{{taskId}}"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
