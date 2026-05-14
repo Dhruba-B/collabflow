@@ -1,6 +1,9 @@
 import { TextField } from "@mui/material";
 
-const AppInput = ({ sx = {}, ...props }) => {
+const AppInput = ({
+    sx = {},
+    ...props
+}) => {
     return (
         <TextField
             fullWidth
@@ -8,7 +11,7 @@ const AppInput = ({ sx = {}, ...props }) => {
             size="small"
             sx={{
                 "& .MuiOutlinedInput-root": {
-                    height: 48,
+                    minHeight: 48,
 
                     borderRadius: "12px",
 
@@ -33,13 +36,19 @@ const AppInput = ({ sx = {}, ...props }) => {
 
                 "& .MuiInputBase-input": {
                     px: 1.6,
+                    py: 1.4,
+                },
+
+                "& .MuiInputAdornment-root": {
+                    mr: 0.5,
                 },
 
                 "& .MuiInputLabel-root": {
                     fontSize: 14,
                 },
 
-                "& .MuiInputLabel-root.Mui-focused": {
+                "& .MuiInputLabel-root.Mui-focused":
+                {
                     color: "primary.main",
                 },
 

@@ -53,9 +53,7 @@ const ThemeToggle = ({
                     : "0 10px 30px rgba(0,0,0,0.08)",
 
                 transition: "all 0.2s ease",
-                color: isDark
-                    ? theme.palette.text.default
-                    : theme.palette.text.primary,
+                color: theme.palette.text.primary,
 
                 "&:hover": {
                     background:

@@ -9,6 +9,7 @@ const darkTheme = createTheme({
         primary: {
             main: darkColors.primary,
             dark: darkColors.primaryHover,
+            soft: darkColors.primarySoft,
         },
 
         secondary: {
@@ -21,6 +22,7 @@ const darkTheme = createTheme({
         },
 
         text: {
+            default: darkColors.textDefault,
             primary: darkColors.textPrimary,
             secondary: darkColors.textSecondary,
         },

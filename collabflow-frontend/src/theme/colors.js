@@ -4,6 +4,7 @@ export const lightColors = {
     surfaceSecondary: "#F1EFE8",
     border: "#E8E5DF",
 
+    textDefault: "#F0F6FC",
     textPrimary: "#1A1A18",
     textSecondary: "#444441",
     textMuted: "#888780",
@@ -25,13 +26,14 @@ export const darkColors = {
     surfaceSecondary: "#21262D",
     border: "#30363D",
 
+    textDefault: "#1A1A18",
     textPrimary: "#F0F6FC",
     textSecondary: "#C9D1D9",
     textMuted: "#8B949E",
 
     primary: "#fcf94a",
     primaryHover: "#fffd91",
-    primarySoft: "#3A1F23",
+    primarySoft: "#585a1663",
 
     highlight: "#E84855",
 

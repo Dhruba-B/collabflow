@@ -17,10 +17,20 @@ import {
 import AppCard from "../../components/card/AppCard";
 import AppButton from "../../components/button/AppButton";
 import AppInput from "../../components/input/AppInput";
+import { useRegister } from "../../modules/auth/authHooks";
+import useAuthStore from "../../store/authStore";
+import { useState } from "react";
 
 const RegisterPage = () => {
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
+    const [name, setName] = useState("");
+
     const theme = useTheme();
     const navigate = useNavigate();
+
+    const RegisterMutation = useRegister();
+    const { setAuth } = useAuthStore();
 
     return (
         <Box
@@ -274,6 +284,8 @@ const RegisterPage = () => {
                             </Typography>
 
                             <AppInput
+                                value={name}
+                                onChange={(e) => setName(e.target.value)}
                                 placeholder="John Doe"
                             />
                         </Box>
@@ -294,6 +306,8 @@ const RegisterPage = () => {
                             </Typography>
 
                             <AppInput
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 placeholder="you@company.com"
                             />
                         </Box>
@@ -314,6 +328,8 @@ const RegisterPage = () => {
                             </Typography>
 
                             <AppInput
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
                                 type="password"
                                 placeholder="Create password"
                             />
@@ -323,6 +339,15 @@ const RegisterPage = () => {
                     {/* submit */}
                     <AppButton
                         fullWidth
+                        onClick={async () => {
+                            const response = await RegisterMutation.mutateAsync({ name, email, password })
+                            console.log(response);
+
+                            setAuth({
+                                user: response?.data?.user,
+                                token: response?.data?.token,
+                            });
+                        }}
                         sx={{
                             height: 52,
 

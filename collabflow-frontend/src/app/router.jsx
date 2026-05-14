@@ -1,15 +1,34 @@
 import { Routes, Route } from "react-router-dom";
 import LoginPage from "../pages/auth/LoginPage";
 import RegisterPage from "../pages/auth/RegisterPage";
+import HomePage from "../pages/home/HomePage";
+import { ThemeToggle } from "../components";
+import { useState } from "react";
+import useThemeStore from "../store/themeStore";
+import DashboardPage from "../pages/dashboard/DashboardPage";
+import WorkspacePage from "../pages/workspace/WorkspacePage";
+import BoardPage from "../pages/board/BoardPage";
 
 const Router = () => {
+    const { mode, toggleTheme } = useThemeStore();
     return (
-        <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/register" element={<RegisterPage />} />
+        <>
+            <ThemeToggle mode={mode}
+                onToggle={toggleTheme}
+            />
+            <Routes>
 
-            <Route path="/" element={<div>Home</div>} />
-        </Routes>
+                <Route path="/login" element={<LoginPage />} />
+                <Route path="/register" element={<RegisterPage />} />
+                <Route path="/" element={<HomePage />} />
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/workspaces/:workspaceId" element={<WorkspacePage />} />
+                <Route path="/workspaces/:workspaceId/board/:boardId" element={<BoardPage />} />
+
+                {/* <Route path="/" element={<div>Home</div>} /> */}
+            </Routes>
+        </>
+
     );
 };
 

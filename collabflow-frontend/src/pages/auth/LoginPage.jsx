@@ -18,20 +18,29 @@ import {
     MoreHoriz,
     Visibility,
     VisibilityOff,
+    VisibilityOffOutlined,
+    VisibilityOutlined,
 } from "@mui/icons-material";
 
 import AppCard from "../../components/card/AppCard";
 import AppButton from "../../components/button/AppButton";
 import AppInput from "../../components/input/AppInput";
 import useThemeStore from "../../store/themeStore";
+import useAuthStore from "../../store/authStore";
 import { ThemeToggle } from "../../components";
+import { useLogin } from "../../modules/auth/authHooks";
 
 const LoginPage = () => {
     const navigate = useNavigate();
     const [showPassword, setShowPassword] = useState(false);
+    const [email, setEmail] = useState("");
+    const [password, setPassword] = useState("");
     const { mode, toggleTheme } = useThemeStore();
 
     const theme = useTheme();
+
+    const loginMutation = useLogin();
+    const { setAuth } = useAuthStore();
 
     return (
         <Box
@@ -47,10 +56,6 @@ const LoginPage = () => {
                 py: 4,
             }}
         >
-            <ThemeToggle
-                mode={mode}
-                onToggle={toggleTheme}
-            />
             <AppCard
                 sx={{
                     width: "100%",
@@ -315,6 +320,10 @@ const LoginPage = () => {
 
                             <AppInput
                                 placeholder="you@company.com"
+                                value={email}
+                                onChange={(e) =>
+                                    setEmail(e.target.value)
+                                }
                             />
                         </Box>
 
@@ -340,24 +349,20 @@ const LoginPage = () => {
                                         : "password"
                                 }
                                 placeholder="••••••••"
-                                InputProps={{
-                                    endAdornment: (
-                                        <InputAdornment position="end">
-                                            <IconButton
-                                                onClick={() =>
-                                                    setShowPassword(
-                                                        !showPassword
-                                                    )
-                                                }
-                                            >
-                                                {showPassword ? (
-                                                    <VisibilityOff />
-                                                ) : (
-                                                    <Visibility />
-                                                )}
-                                            </IconButton>
-                                        </InputAdornment>
-                                    ),
+                                value={password}
+                                onChange={(e) =>
+                                    setPassword(e.target.value)
+                                }
+                                slotProps={{
+                                    input: {
+                                        endAdornment: (
+                                            <InputAdornment position="end">
+                                                <IconButton sx={{ color: theme.palette.text.primary }} onClick={() => setShowPassword(!showPassword)}>
+                                                    {showPassword ? <VisibilityOffOutlined /> : <VisibilityOutlined />}
+                                                </IconButton>
+                                            </InputAdornment>
+                                        ),
+                                    },
                                 }}
                             />
                         </Box>
@@ -392,6 +397,17 @@ const LoginPage = () => {
                     {/* submit */}
                     <AppButton
                         fullWidth
+                        onClick={async () => {
+                            const response = await loginMutation.mutateAsync({ email, password })
+                            console.log(response);
+
+                            setAuth({
+                                user: response?.data?.user,
+                                token: response?.data?.token,
+                            });
+
+                            navigate("/dashboard");
+                        }}
                         sx={{
                             height: 52,
 
