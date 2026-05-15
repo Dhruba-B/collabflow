@@ -6,11 +6,30 @@ export const initializeSocket = (io) => {
     io.on("connection", (socket) => {
         console.log("Socket connected:", socket.id);
 
-        socket.on("join-board", (boardId) => {
+        const joinBoard = (boardId) => {
             socket.join(`board:${boardId}`);
 
             console.log(
                 `Socket ${socket.id} joined board:${boardId}`
+            );
+        };
+
+        socket.on("board", joinBoard);
+        socket.on("join-board", joinBoard);
+
+        socket.on("workspace", (workspaceId) => {
+            socket.join(`workspace:${workspaceId}`);
+
+            console.log(
+                `Socket ${socket.id} joined workspace:${workspaceId}`
+            );
+        });
+
+        socket.on("workspace-list", () => {
+            socket.join("workspace-list");
+
+            console.log(
+                `Socket ${socket.id} joined workspace-list`
             );
         });
 
@@ -19,6 +38,22 @@ export const initializeSocket = (io) => {
 
             console.log(
                 `Socket ${socket.id} left board:${boardId}`
+            );
+        });
+
+        socket.on("leave-workspace", (workspaceId) => {
+            socket.leave(`workspace:${workspaceId}`);
+
+            console.log(
+                `Socket ${socket.id} left workspace:${workspaceId}`
+            );
+        });
+
+        socket.on("leave-workspace-list", () => {
+            socket.leave("workspace-list");
+
+            console.log(
+                `Socket ${socket.id} left workspace-list`
             );
         });
 

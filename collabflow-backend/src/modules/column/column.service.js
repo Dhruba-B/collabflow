@@ -1,9 +1,17 @@
 import prisma from "../../../prisma/client.js";
+import { getIO } from "../../websocket/socket.js";
 
 const createHttpError = (message, statusCode) => {
     const error = new Error(message);
     error.statusCode = statusCode;
     return error;
+};
+
+const emitColumnEvent = ({ boardId, action, column }) => {
+    getIO().to(`board:${boardId}`).emit("column", {
+        action,
+        column,
+    });
 };
 
 const columnSelect = {
@@ -95,7 +103,7 @@ const normalizeBoardColumnPositions = async ({ boardId }, client) => {
 };
 
 export const createColumn = async ({ name, boardId, ownerId }) => {
-    return prisma.$transaction(async (tx) => {
+    const column = await prisma.$transaction(async (tx) => {
         await assertBoardAccess({ boardId, ownerId }, tx);
 
         const columnCount = await tx.column.count({
@@ -111,6 +119,14 @@ export const createColumn = async ({ name, boardId, ownerId }) => {
             select: columnSelect,
         });
     });
+
+    emitColumnEvent({
+        boardId: column.boardId,
+        action: "created",
+        column,
+    });
+
+    return column;
 };
 
 export const getColumnsByBoard = async ({ boardId, ownerId }) => {
@@ -127,7 +143,7 @@ export const getColumnsByBoard = async ({ boardId, ownerId }) => {
 };
 
 export const updateColumn = async ({ columnId, ownerId, name }) => {
-    return prisma.$transaction(async (tx) => {
+    const column = await prisma.$transaction(async (tx) => {
         await findColumnForOwner({ columnId, ownerId }, tx);
 
         return tx.column.update({
@@ -136,10 +152,18 @@ export const updateColumn = async ({ columnId, ownerId, name }) => {
             select: columnSelect,
         });
     });
+
+    emitColumnEvent({
+        boardId: column.boardId,
+        action: "updated",
+        column,
+    });
+
+    return column;
 };
 
 export const deleteColumn = async ({ columnId, ownerId }) => {
-    return prisma.$transaction(async (tx) => {
+    const column = await prisma.$transaction(async (tx) => {
         const column = await findColumnForOwner({ columnId, ownerId }, tx);
 
         await tx.task.deleteMany({
@@ -155,10 +179,18 @@ export const deleteColumn = async ({ columnId, ownerId }) => {
 
         return deletedColumn;
     });
+
+    emitColumnEvent({
+        boardId: column.boardId,
+        action: "deleted",
+        column,
+    });
+
+    return column;
 };
 
 export const reorderColumns = async ({ columns, ownerId }) => {
-    return prisma.$transaction(async (tx) => {
+    const reorderedColumns = await prisma.$transaction(async (tx) => {
         const columnIds = columns.map((column) => column.id);
         const existingColumns = await tx.column.findMany({
             where: {
@@ -203,4 +235,12 @@ export const reorderColumns = async ({ columns, ownerId }) => {
             select: columnSelect,
         });
     });
+
+    emitColumnEvent({
+        boardId: reorderedColumns[0]?.boardId,
+        action: "reordered",
+        column: reorderedColumns,
+    });
+
+    return reorderedColumns;
 };

@@ -7,6 +7,13 @@ const createHttpError = (message, statusCode) => {
     return error;
 };
 
+const emitTaskEvent = ({ boardId, action, task }) => {
+    getIO().to(`board:${boardId}`).emit("task", {
+        action,
+        task,
+    });
+};
+
 const taskSelect = {
     id: true,
     title: true,
@@ -141,7 +148,7 @@ const insertTaskAtPosition = async ({ taskId, columnId, position }, client) => {
 };
 
 export const createTask = async ({ title, description, columnId, ownerId }) => {
-    return prisma.$transaction(async (tx) => {
+    const task = await prisma.$transaction(async (tx) => {
         await assertColumnAccess({ columnId, ownerId }, tx);
 
         const taskCount = await tx.task.count({
@@ -158,16 +165,16 @@ export const createTask = async ({ title, description, columnId, ownerId }) => {
             select: taskSelect,
         });
 
-        const io = getIO();
-        const boardId = await getBoardIdForColumn(columnId, tx);
-        console.log(`Emitting task-created event to board:${boardId} for task ${task}`);     
-        io.to(`board:${boardId}`).emit(
-            "task-created",
-            task
-        );
-
         return task;
     });
+
+    emitTaskEvent({
+        boardId: task.column.boardId,
+        action: "created",
+        task,
+    });
+
+    return task;
 };
 
 export const getTasksByColumn = async ({ columnId, ownerId }) => {
@@ -188,7 +195,7 @@ export const getTaskById = async ({ taskId, ownerId }) => {
 };
 
 export const updateTask = async ({ taskId, ownerId, data }) => {
-    return prisma.$transaction(async (tx) => {
+    const task = await prisma.$transaction(async (tx) => {
         await findTaskForOwner({ taskId, ownerId }, tx);
 
         return tx.task.update({
@@ -197,10 +204,18 @@ export const updateTask = async ({ taskId, ownerId, data }) => {
             select: taskSelect,
         });
     });
+
+    emitTaskEvent({
+        boardId: task.column.boardId,
+        action: "updated",
+        task,
+    });
+
+    return task;
 };
 
 export const deleteTask = async ({ taskId, ownerId }) => {
-    return prisma.$transaction(async (tx) => {
+    const task = await prisma.$transaction(async (tx) => {
         const task = await findTaskForOwner({ taskId, ownerId }, tx);
 
         const deletedTask = await tx.task.delete({
@@ -212,6 +227,14 @@ export const deleteTask = async ({ taskId, ownerId }) => {
 
         return deletedTask;
     });
+
+    emitTaskEvent({
+        boardId: task.column.boardId,
+        action: "deleted",
+        task,
+    });
+
+    return task;
 };
 
 export const moveTask = async ({
@@ -221,7 +244,7 @@ export const moveTask = async ({
     position,
     ownerId,
 }) => {
-    return prisma.$transaction(async (tx) => {
+    const task = await prisma.$transaction(async (tx) => {
         const task = await findTaskForOwner({ taskId, ownerId }, tx);
 
         if (task.columnId !== sourceColumnId) {
@@ -258,10 +281,18 @@ export const moveTask = async ({
             select: taskSelect,
         });
     });
+
+    emitTaskEvent({
+        boardId: task.column.boardId,
+        action: "moved",
+        task,
+    });
+
+    return task;
 };
 
 export const reorderTasks = async ({ tasks, ownerId }) => {
-    return prisma.$transaction(async (tx) => {
+    const reorderedTasks = await prisma.$transaction(async (tx) => {
         const taskIds = tasks.map((task) => task.id);
         const existingTasks = await tx.task.findMany({
             where: {
@@ -308,4 +339,12 @@ export const reorderTasks = async ({ tasks, ownerId }) => {
             select: taskSelect,
         });
     });
+
+    emitTaskEvent({
+        boardId: reorderedTasks[0]?.column.boardId,
+        action: "reordered",
+        task: reorderedTasks,
+    });
+
+    return reorderedTasks;
 };

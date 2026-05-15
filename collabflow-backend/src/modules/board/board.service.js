@@ -1,9 +1,17 @@
 import prisma from "../../../prisma/client.js";
+import { getIO } from "../../websocket/socket.js";
 
 const createHttpError = (message, statusCode) => {
     const error = new Error(message);
     error.statusCode = statusCode;
     return error;
+};
+
+const emitBoardEvent = ({ workspaceId, action, board }) => {
+    getIO().to(`workspace:${workspaceId}`).emit("board", {
+        action,
+        board,
+    });
 };
 
 const boardSelect = {
@@ -62,7 +70,7 @@ const findBoardForOwner = async ({ boardId, ownerId }, client = prisma) => {
 };
 
 export const createBoard = async ({ name, workspaceId, ownerId }) => {
-    return prisma.$transaction(async (tx) => {
+    const board = await prisma.$transaction(async (tx) => {
         await assertWorkspaceAccess({ workspaceId, ownerId }, tx);
 
         return tx.board.create({
@@ -73,6 +81,14 @@ export const createBoard = async ({ name, workspaceId, ownerId }) => {
             select: boardSelect,
         });
     });
+
+    emitBoardEvent({
+        workspaceId: board.workspaceId,
+        action: "created",
+        board,
+    });
+
+    return board;
 };
 
 export const getBoardsByWorkspace = async ({ workspaceId, ownerId }) => {
@@ -102,6 +118,20 @@ export const getBoardById = async ({ boardId, ownerId }) => {
                     name: true,
                     position: true,
                     createdAt: true,
+                    tasks: {
+                        orderBy: [
+                            { position: "asc" },
+                            { createdAt: "asc" },
+                        ],
+                        select: {
+                            id: true,
+                            title: true,
+                            description: true,
+                            position: true,
+                            columnId: true,
+                            createdAt: true,
+                        },
+                    },
                     _count: {
                         select: {
                             tasks: true,
@@ -120,7 +150,7 @@ export const getBoardById = async ({ boardId, ownerId }) => {
 };
 
 export const updateBoard = async ({ boardId, ownerId, name }) => {
-    return prisma.$transaction(async (tx) => {
+    const board = await prisma.$transaction(async (tx) => {
         await findBoardForOwner({ boardId, ownerId }, tx);
 
         return tx.board.update({
@@ -129,10 +159,18 @@ export const updateBoard = async ({ boardId, ownerId, name }) => {
             select: boardSelect,
         });
     });
+
+    emitBoardEvent({
+        workspaceId: board.workspaceId,
+        action: "updated",
+        board,
+    });
+
+    return board;
 };
 
 export const deleteBoard = async ({ boardId, ownerId }) => {
-    return prisma.$transaction(async (tx) => {
+    const board = await prisma.$transaction(async (tx) => {
         await findBoardForOwner({ boardId, ownerId }, tx);
 
         await tx.task.deleteMany({
@@ -152,4 +190,12 @@ export const deleteBoard = async ({ boardId, ownerId }) => {
             select: boardSelect,
         });
     });
+
+    emitBoardEvent({
+        workspaceId: board.workspaceId,
+        action: "deleted",
+        board,
+    });
+
+    return board;
 };

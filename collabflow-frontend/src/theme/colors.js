@@ -13,7 +13,7 @@ export const lightColors = {
     primaryHover: "#b11723",
     primarySoft: "#FFE5E7",
 
-    highlight: "#FFFD82",
+    highlight: "#FFED66",
 
     success: "#3B6D11",
     warning: "#BA7517",

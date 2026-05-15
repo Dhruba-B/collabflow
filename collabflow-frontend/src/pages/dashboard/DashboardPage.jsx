@@ -1,15 +1,12 @@
 import {
     Box,
-    Chip,
     Stack,
     Typography,
 } from "@mui/material";
 
 import {
     Add,
-    DashboardOutlined,
-    FolderOutlined,
-    SpaceDashboardOutlined,
+    DeleteOutlined,
 } from "@mui/icons-material";
 
 import { useTheme } from "@mui/material/styles";
@@ -17,41 +14,36 @@ import { useTheme } from "@mui/material/styles";
 import {
     AppButton,
     AppCard,
-    ThemeToggle,
 } from "../../components";
 
-import useThemeStore from "../../store/themeStore";
-import logo from "../../assets/collabflow.svg";
-import { useWorkspaces } from "../../modules/workspace/workspaceHooks";
+import {
+    useDeleteWorkspace,
+    useWorkspaces,
+} from "../../modules/workspace/workspaceHooks";
 import CreateWorkspaceModal from "../../modules/workspace/components/CreateWorkspaceModal";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import Rail from "../../components/rail/Rail";
-
-
-const boards = [
-    {
-        name: "Platform Redesign",
-        tasks: 24,
-    },
-    {
-        name: "Realtime Infrastructure",
-        tasks: 13,
-    },
-    {
-        name: "Product Sprint",
-        tasks: 8,
-    },
-];
+import { registerWorkspaceListRealtime } from "../../services/socket/workspaceRealtime";
 
 const DashboardPage = () => {
     const theme = useTheme();
     const navigate = useNavigate();
-    const { data: workspaces, isLoading } = useWorkspaces();
+    const queryClient = useQueryClient();
+    const { data: workspaces } = useWorkspaces();
+    const deleteWorkspaceMutation =
+        useDeleteWorkspace();
     const [
         openCreateWorkspace,
         setOpenCreateWorkspace,
     ] = useState(false);
+
+    useEffect(() => {
+        return registerWorkspaceListRealtime({
+            queryClient,
+        });
+    }, [queryClient]);
 
     return (
         <Box
@@ -100,7 +92,7 @@ const DashboardPage = () => {
                         <Box
                             key={workspace.id}
                             onClick={() => {
-                                navigate(`/workspaces/${workspace.id}`)
+                                navigate(`/workspace/${workspace.id}`)
                             }}
                             sx={{
                                 p: 1.5,
@@ -117,27 +109,74 @@ const DashboardPage = () => {
                                 },
                             }}
                         >
-                            <Typography
+                            <Box
                                 sx={{
-                                    fontSize: 14,
-                                    fontWeight: 600,
+                                    display: "flex",
+                                    alignItems: "flex-start",
+                                    justifyContent:
+                                        "space-between",
+                                    gap: 1,
                                 }}
                             >
-                                {workspace.name}
-                            </Typography>
+                                <Box>
+                                    <Typography
+                                        sx={{
+                                            fontSize: 14,
+                                            fontWeight: 600,
+                                        }}
+                                    >
+                                        {workspace.name}
+                                    </Typography>
 
-                            <Typography
-                                sx={{
-                                    fontSize: 12,
+                                    <Typography
+                                        sx={{
+                                            fontSize: 12,
 
-                                    mt: 0.5,
+                                            mt: 0.5,
 
-                                    color:
-                                        theme.palette.text.secondary,
-                                }}
-                            >
-                                {workspace?._count?.boards || 0} active boards
-                            </Typography>
+                                            color:
+                                                theme.palette.text.secondary,
+                                        }}
+                                    >
+                                        {workspace?._count?.boards || 0} active boards
+                                    </Typography>
+                                </Box>
+
+                                <Box
+                                    onClick={(event) => {
+                                        event.stopPropagation();
+
+                                        deleteWorkspaceMutation.mutate(
+                                            {
+                                                workspaceId:
+                                                    workspace.id,
+                                            }
+                                        );
+                                    }}
+                                    sx={{
+                                        width: 28,
+                                        height: 28,
+                                        borderRadius: "10px",
+                                        display: "flex",
+                                        alignItems: "center",
+                                        justifyContent:
+                                            "center",
+                                        color:
+                                            theme.palette.primary.main,
+                                        transition:
+                                            "all 0.16s ease",
+
+                                        "&:hover": {
+                                            background:
+                                                theme.palette.primary.soft,
+                                            color:
+                                                theme.palette.primary.dark,
+                                        },
+                                    }}
+                                >
+                                    <DeleteOutlined fontSize="small" />
+                                </Box>
+                            </Box>
                         </Box>
                     ))}
                 </Stack>

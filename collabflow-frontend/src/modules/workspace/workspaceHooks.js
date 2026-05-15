@@ -6,6 +6,8 @@ import {
 
 import {
     createWorkspace,
+    deleteWorkspace,
+    getWorkspaceById,
     getWorkspaces,
 } from "./workspaceApi";
 
@@ -34,3 +36,35 @@ export const useCreateWorkspace =
             },
         });
     };
+
+export const useWorkspace = (
+    workspaceId
+) => {
+    return useQuery({
+        queryKey:
+            workspaceKeys.detail(
+                workspaceId
+            ),
+
+        queryFn: () =>
+            getWorkspaceById(
+                workspaceId
+            ),
+
+        enabled: !!workspaceId,
+    });
+};
+
+export const useDeleteWorkspace = () => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: deleteWorkspace,
+
+        onSuccess: () => {
+            queryClient.invalidateQueries({
+                queryKey: workspaceKeys.all,
+            });
+        },
+    });
+};

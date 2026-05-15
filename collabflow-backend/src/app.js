@@ -21,10 +21,10 @@ app.get("/", (req, res) => {
 });
 
 app.use("/api/auth", authRoutes);
-app.use("/api/workspaces", workspaceRoutes);
-app.use("/api/boards", boardRoutes);
-app.use("/api/columns", columnRoutes);
-app.use("/api/tasks", taskRoutes);
+app.use("/api/workspace", workspaceRoutes);
+app.use("/api/board", boardRoutes);
+app.use("/api/column", columnRoutes);
+app.use("/api/task", taskRoutes);
 
 app.use(errorHandler);
 

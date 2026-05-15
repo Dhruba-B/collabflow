@@ -8,12 +8,15 @@ import {
     Typography,
 } from "@mui/material";
 
-import { alpha, useTheme } from "@mui/material/styles";
+import {
+    alpha,
+    useTheme,
+} from "@mui/material/styles";
 
 import {
     AutoAwesome,
     Close,
-    WorkspacesOutlined,
+    ViewColumnOutlined,
 } from "@mui/icons-material";
 
 import {
@@ -21,35 +24,37 @@ import {
     AppInput,
 } from "../../../components";
 
-import { useCreateWorkspace } from "../workspaceHooks";
+import { useCreateColumn } from "../columnHooks";
 
-const CreateWorkspaceModal = ({
+const CreateColumnModal = ({
     open,
     onClose,
+    boardId,
 }) => {
     const theme = useTheme();
 
     const [name, setName] = useState("");
 
-    const createWorkspaceMutation =
-        useCreateWorkspace();
+    const createColumnMutation =
+        useCreateColumn();
 
-    const handleCreateWorkspace =
-        async () => {
-            if (!name?.trim()) return;
+    const handleCreateColumn = () => {
+        if (!name?.trim()) return;
 
-            try {
-                await createWorkspaceMutation.mutateAsync(
-                    {
-                        name,
-                    }
-                );
-                setName("");
-                onClose();
-            } catch (error) {
-                console.error(error);
+        createColumnMutation.mutate(
+            {
+                name: name.trim(),
+                boardId,
+            },
+            {
+                onSuccess: () => {
+                    setName("");
+
+                    onClose();
+                },
             }
-        };
+        );
+    };
 
     return (
         <Dialog
@@ -63,7 +68,8 @@ const CreateWorkspaceModal = ({
                         maxWidth: 540,
                         minHeight: 540,
                         borderRadius: "30px",
-                        background: theme.palette.background.default,
+                        background:
+                            theme.palette.background.default,
                         backgroundImage: "none",
                         border: `1px solid ${theme.palette.divider}`,
                         overflow: "hidden",
@@ -72,26 +78,19 @@ const CreateWorkspaceModal = ({
                 },
             }}
         >
-            {/* glow */}
             <Box
                 sx={{
                     position: "absolute",
-
                     top: -140,
                     right: -140,
-
                     width: 320,
                     height: 320,
-
                     borderRadius: "50%",
-
                     background: `radial-gradient(circle, ${alpha(
                         theme.palette.primary.main,
                         0.16
                     )}, transparent 72%)`,
-
                     pointerEvents: "none",
-
                     filter: "blur(10px)",
                 }}
             />
@@ -100,22 +99,16 @@ const CreateWorkspaceModal = ({
                 spacing={4}
                 sx={{
                     position: "relative",
-
                     height: "100%",
-
                     p: 4,
-
-                    justifyContent:
-                        "space-between",
+                    justifyContent: "space-between",
                 }}
             >
-                {/* top */}
                 <Box>
                     <Box
                         sx={{
                             display: "flex",
-                            alignItems:
-                                "flex-start",
+                            alignItems: "flex-start",
                             justifyContent:
                                 "space-between",
                         }}
@@ -124,16 +117,10 @@ const CreateWorkspaceModal = ({
                             sx={{
                                 width: 54,
                                 height: 54,
-
-                                borderRadius:
-                                    "18px",
-
+                                borderRadius: "18px",
                                 display: "flex",
-                                alignItems:
-                                    "center",
-                                justifyContent:
-                                    "center",
-
+                                alignItems: "center",
+                                justifyContent: "center",
                                 background:
                                     theme.palette.mode ===
                                         "dark"
@@ -145,15 +132,11 @@ const CreateWorkspaceModal = ({
                                             0.14
                                         )
                                         : "#FFF1F3",
-
                                 color:
-                                    theme
-                                        .palette
-                                        .primary
-                                        .main,
+                                    theme.palette.primary.main,
                             }}
                         >
-                            <WorkspacesOutlined />
+                            <ViewColumnOutlined />
                         </Box>
 
                         <Box
@@ -161,26 +144,18 @@ const CreateWorkspaceModal = ({
                             sx={{
                                 width: 40,
                                 height: 40,
-
                                 borderRadius: "12px",
-
                                 display: "flex",
                                 alignItems: "center",
-                                justifyContent:
-                                    "center",
-
+                                justifyContent: "center",
                                 cursor: "pointer",
-
                                 color:
                                     theme.palette.text.secondary,
-
                                 transition:
                                     "all 0.16s ease",
-
                                 "&:hover": {
                                     background:
                                         theme.palette.background.paper,
-
                                     color:
                                         theme.palette.text.primary,
                                 },
@@ -193,56 +168,45 @@ const CreateWorkspaceModal = ({
                     <Typography
                         sx={{
                             mt: 3,
-
                             fontSize: 34,
                             fontWeight: 800,
-
-                            letterSpacing:
-                                "-0.05em",
+                            letterSpacing: "-0.05em",
                         }}
                     >
-                        Create workspace
+                        Create column
                     </Typography>
 
                     <Typography
                         sx={{
                             mt: 1.5,
-
                             fontSize: 15,
-
                             lineHeight: 1.8,
-
                             color:
                                 theme.palette.text.secondary,
                         }}
                     >
-                        Set up a collaborative
-                        workspace for your team,
-                        projects, and realtime
-                        workflows.
+                        Columns group tasks into clear
+                        workflow stages for this board.
                     </Typography>
                 </Box>
 
-                {/* form */}
                 <Stack spacing={3}>
                     <Box>
                         <Typography
                             sx={{
                                 mb: 1,
-
                                 fontSize: 14,
                                 fontWeight: 600,
-
                                 color:
                                     theme.palette.text.secondary,
                             }}
                         >
-                            Workspace name
+                            Column name
                         </Typography>
 
                         <AppInput
                             autoFocus
-                            placeholder="e.g. Product Team"
+                            placeholder="e.g. In Progress"
                             value={name}
                             onChange={(e) =>
                                 setName(
@@ -252,30 +216,24 @@ const CreateWorkspaceModal = ({
                         />
                     </Box>
 
-                    {/* hint */}
                     <Box
                         sx={{
                             display: "flex",
                             alignItems: "center",
                             gap: 1.5,
-
                             p: 2,
-
                             borderRadius: "18px",
-
                             background:
                                 theme.palette.mode ===
                                     "dark"
                                     ? "rgba(255,255,255,0.04)"
                                     : theme.palette.background.paper,
-
                             border: `1px solid ${theme.palette.divider}`,
                         }}
                     >
                         <AutoAwesome
                             sx={{
                                 fontSize: 18,
-
                                 color:
                                     theme.palette.primary.main,
                             }}
@@ -284,21 +242,18 @@ const CreateWorkspaceModal = ({
                         <Typography
                             sx={{
                                 fontSize: 13,
-
                                 lineHeight: 1.7,
-
                                 color:
                                     theme.palette.text.secondary,
                             }}
                         >
-                            Workspaces help organize
-                            boards, members, and
-                            collaborative workflows.
+                            New columns appear in order
+                            and can contain tasks,
+                            updates, and team workflow.
                         </Typography>
                     </Box>
                 </Stack>
 
-                {/* actions */}
                 <Stack
                     direction="row"
                     spacing={1.5}
@@ -310,17 +265,13 @@ const CreateWorkspaceModal = ({
                         sx={{
                             borderColor:
                                 theme.palette.divider,
-
                             color:
                                 theme.palette.text.primary,
-
                             background:
                                 theme.palette.background.paper,
-
                             "&:hover": {
                                 borderColor:
                                     theme.palette.divider,
-
                                 background:
                                     theme.palette.background.paper,
                             },
@@ -330,29 +281,24 @@ const CreateWorkspaceModal = ({
                     </AppButton>
 
                     <AppButton
-                        onClick={
-                            handleCreateWorkspace
-                        }
+                        onClick={handleCreateColumn}
                         disabled={
-                            createWorkspaceMutation.isPending
+                            createColumnMutation.isPending
                         }
                         sx={{
                             px: 3,
-
                             background:
                                 theme.palette.primary.main,
-
                             color: theme.palette.text.default,
-
                             "&:hover": {
                                 background:
                                     theme.palette.primary.dark,
                             },
                         }}
                     >
-                        {createWorkspaceMutation.isPending
+                        {createColumnMutation.isPending
                             ? "Creating..."
-                            : "Create workspace"}
+                            : "Create column"}
                     </AppButton>
                 </Stack>
             </Stack>
@@ -360,4 +306,4 @@ const CreateWorkspaceModal = ({
     );
 };
 
-export default CreateWorkspaceModal;
+export default CreateColumnModal;

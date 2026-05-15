@@ -29,8 +29,8 @@ const ThemeToggle = ({
             sx={{
                 position: "fixed",
 
-                top: 22,
-                right: 22,
+                bottom: 22,
+                left: 8,
 
                 zIndex: 9999,
                 p: 0.3,

@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 
 import {
     Box,
@@ -7,14 +8,13 @@ import {
     Typography,
 } from "@mui/material";
 
-import { useTheme } from "@mui/material/styles";
+import { alpha, useTheme } from "@mui/material/styles";
 
 import {
     Add,
     BoltOutlined,
-    DashboardOutlined,
+    DeleteOutlined,
     FolderOutlined,
-    MoreHoriz,
 } from "@mui/icons-material";
 
 import {
@@ -27,40 +27,37 @@ import {
     AppCard,
     ThemeToggle,
 } from "../../components";
-import logo from "../../assets/collabflow.svg";
 
 import useThemeStore from "../../store/themeStore";
-import CreateBoardModal from "../board/components/CreateBoardModal";
+import CreateBoardModal from "../../modules/board/components/CreateBoardModal";
 import Rail from "../../components/rail/Rail";
-
-const boards = [
-    {
-        id: 1,
-        name: "Product Sprint",
-        tasks: 24,
-        members: 5,
-    },
-    {
-        id: 2,
-        name: "Realtime Infrastructure",
-        tasks: 13,
-        members: 3,
-    },
-    {
-        id: 3,
-        name: "Design System",
-        tasks: 8,
-        members: 4,
-    },
-];
+import {
+    useDeleteBoard,
+    useWorkspaceBoards,
+} from "../../modules/board/boardHooks";
+import { useWorkspace } from "../../modules/workspace/workspaceHooks";
+import { registerWorkspaceRealtime } from "../../services/socket/workspaceRealtime";
 
 const WorkspacePage = () => {
     const theme = useTheme();
 
     const navigate = useNavigate();
+    const queryClient = useQueryClient();
 
     const { workspaceId } =
         useParams();
+
+    const {
+        data: boards = [],
+        isLoading: boardsLoading,
+    } = useWorkspaceBoards(workspaceId);
+
+    const deleteBoardMutation =
+        useDeleteBoard();
+
+    const {
+        data: workspace,
+    } = useWorkspace(workspaceId);
 
     const { mode, toggleTheme } =
         useThemeStore();
@@ -69,6 +66,13 @@ const WorkspacePage = () => {
         openCreateBoard,
         setOpenCreateBoard,
     ] = useState(false);
+
+    useEffect(() => {
+        return registerWorkspaceRealtime({
+            workspaceId,
+            queryClient,
+        });
+    }, [workspaceId, queryClient]);
 
     return (
         <Box
@@ -127,7 +131,7 @@ const WorkspacePage = () => {
                                     "-0.04em",
                             }}
                         >
-                            Workspace
+                            {workspace?.name || "Workspace1"}
                         </Typography>
 
                         <Stack
@@ -161,10 +165,7 @@ const WorkspacePage = () => {
                                         "999px",
 
                                     background:
-                                        theme.palette.mode ===
-                                            "dark"
-                                            ? "rgba(255,255,255,0.06)"
-                                            : theme.palette.background.paper,
+                                        theme.palette.mode === theme.palette.background.paper,
 
                                     border: `1px solid ${theme.palette.divider}`,
                                 }}
@@ -192,11 +193,7 @@ const WorkspacePage = () => {
                                 borderRadius:
                                     "999px",
 
-                                background:
-                                    theme.palette.mode ===
-                                        "dark"
-                                        ? "rgba(232,72,85,0.12)"
-                                        : "#FFF1F3",
+                                background: alpha(theme.palette.secondary.main, 0.50),
 
                                 color:
                                     theme.palette.primary.main,
@@ -310,33 +307,26 @@ const WorkspacePage = () => {
                                 transition:
                                     "all 0.18s ease",
 
-                                background:
-                                    theme.palette.mode ===
-                                        "dark"
-                                        ? "rgba(255,255,255,0.02)"
-                                        : theme.palette.background.paper,
+                                background: theme.palette.background.paper,
 
                                 "&:hover": {
                                     borderColor:
                                         theme.palette.primary.main,
 
-                                    background:
-                                        theme.palette.mode ===
-                                            "dark"
-                                            ? "rgba(232,72,85,0.08)"
-                                            : "#FFF7F8",
+                                    background: alpha(theme.palette.primary.main, 0.16),
                                 },
                             }}
                         >
                             <Stack
                                 spacing={1.5}
                                 alignItems="center"
+                                sx={{ display: "flex", flexDirection: "column", justifyContent: "center", gap: 1.5 }}
                             >
                                 <Box
                                     sx={{
                                         width: 52,
                                         height: 52,
-
+                                        alignSelf: "center",
                                         borderRadius:
                                             "16px",
 
@@ -349,19 +339,14 @@ const WorkspacePage = () => {
                                         justifyContent:
                                             "center",
 
-                                        background:
-                                            theme
-                                                .palette
-                                                .mode ===
-                                                "dark"
-                                                ? "rgba(232,72,85,0.14)"
-                                                : "#FFF1F3",
+                                        background: theme.palette.primary.soft,
 
-                                        color:
-                                            theme
-                                                .palette
-                                                .primary
-                                                .main,
+                                        color: theme.palette.primary.main,
+
+                                        "&:hover": {
+                                            background: theme.palette.primary.main,
+                                            color: theme.palette.text.default,
+                                        }
                                     }}
                                 >
                                     <Add />
@@ -379,7 +364,20 @@ const WorkspacePage = () => {
                         </Box>
 
                         {/* boards */}
-                        {boards.map((board) => (
+                        {boardsLoading && (
+                            <Typography
+                                sx={{
+                                    fontSize: 14,
+
+                                    color:
+                                        theme.palette.text.secondary,
+                                }}
+                            >
+                                Loading boards...
+                            </Typography>
+                        )}
+
+                        {!boardsLoading && boards.map((board) => (
                             <AppCard
                                 key={board.id}
                                 onClick={() =>
@@ -443,14 +441,8 @@ const WorkspacePage = () => {
                                                 borderRadius:
                                                     "16px",
 
-                                                background:
-                                                    theme
-                                                        .palette
-                                                        .mode ===
-                                                        "dark"
-                                                        ? "rgba(232,72,85,0.14)"
-                                                        : "#FFF1F3",
-
+                                                background: alpha(theme.palette.secondary.main, 0.16),
+                                                border: `2px solid ${theme.palette.primary.light}`,
                                                 color:
                                                     theme
                                                         .palette
@@ -471,6 +463,17 @@ const WorkspacePage = () => {
                                         </Box>
 
                                         <Box
+                                            onClick={(event) => {
+                                                event.stopPropagation();
+
+                                                deleteBoardMutation.mutate(
+                                                    {
+                                                        boardId:
+                                                            board.id,
+                                                        workspaceId,
+                                                    }
+                                                );
+                                            }}
                                             sx={{
                                                 width: 36,
                                                 height: 36,
@@ -490,20 +493,26 @@ const WorkspacePage = () => {
                                                 color:
                                                     theme
                                                         .palette
-                                                        .text
-                                                        .secondary,
+                                                        .primary
+                                                        .main,
 
                                                 "&:hover":
                                                 {
                                                     background:
                                                         theme
                                                             .palette
-                                                            .background
-                                                            .default,
+                                                            .primary
+                                                            .soft,
+
+                                                    color:
+                                                        theme
+                                                            .palette
+                                                            .primary
+                                                            .dark,
                                                 },
                                             }}
                                         >
-                                            <MoreHoriz fontSize="small" />
+                                            <DeleteOutlined fontSize="small" />
                                         </Box>
                                     </Box>
 
@@ -535,12 +544,12 @@ const WorkspacePage = () => {
                                             }}
                                         >
                                             <Chip
-                                                label={`${board.tasks} tasks`}
+                                                label={`${board?._count?.columns || 0} columns`}
                                                 size="small"
                                             />
 
                                             <Chip
-                                                label={`${board.members} members`}
+                                                label="Workspace board"
                                                 size="small"
                                             />
                                         </Stack>
@@ -558,8 +567,9 @@ const WorkspacePage = () => {
                 onClose={() =>
                     setOpenCreateBoard(false)
                 }
+                workspaceId={workspaceId}
             />
-        </Box>
+        </Box >
     );
 };
 

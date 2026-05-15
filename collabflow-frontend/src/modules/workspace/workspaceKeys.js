@@ -1,5 +1,5 @@
 export const workspaceKeys = {
-    all: ["workspaces"],
+    all: ["workspace"],
 
     detail: (id) => [
         "workspace",

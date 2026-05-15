@@ -16,7 +16,7 @@ import {
 import {
     AutoAwesome,
     Close,
-    SpaceDashboardOutlined,
+    TaskAltOutlined,
 } from "@mui/icons-material";
 
 import {
@@ -24,26 +24,43 @@ import {
     AppInput,
 } from "../../../components";
 
-const CreateBoardModal = ({
+import { useCreateTask } from "../taskHooks";
+
+const CreateTaskModal = ({
     open,
     onClose,
+    boardId,
+    columnId,
+    columnName,
 }) => {
     const theme = useTheme();
 
-    const [name, setName] = useState("");
+    const [title, setTitle] = useState("");
+    const [description, setDescription] =
+        useState("");
 
-    const handleCreateBoard = async () => {
-        if (!name?.trim()) return;
+    const createTaskMutation = useCreateTask();
 
-        try {
-            console.log("create board", name);
+    const handleCreateTask = () => {
+        if (!title?.trim() || !columnId) return;
 
-            setName("");
+        createTaskMutation.mutate(
+            {
+                title: title.trim(),
+                description:
+                    description.trim() || undefined,
+                columnId,
+                boardId,
+            },
+            {
+                onSuccess: () => {
+                    setTitle("");
+                    setDescription("");
 
-            onClose();
-        } catch (error) {
-            console.error(error);
-        }
+                    onClose();
+                },
+            }
+        );
     };
 
     return (
@@ -51,48 +68,36 @@ const CreateBoardModal = ({
             open={open}
             onClose={onClose}
             TransitionComponent={Fade}
-            PaperProps={{
-                sx: {
-                    width: "100%",
-                    maxWidth: 540,
-
-                    minHeight: 640,
-
-                    borderRadius: "30px",
-
-                    background:
-                        theme.palette.background.default,
-
-                    backgroundImage: "none",
-
-                    border: `1px solid ${theme.palette.divider}`,
-
-                    overflow: "hidden",
-
-                    position: "relative",
+            slotProps={{
+                paper: {
+                    sx: {
+                        width: "100%",
+                        maxWidth: 540,
+                        minHeight: 640,
+                        borderRadius: "30px",
+                        background:
+                            theme.palette.background.default,
+                        backgroundImage: "none",
+                        border: `1px solid ${theme.palette.divider}`,
+                        overflow: "hidden",
+                        position: "relative",
+                    },
                 },
             }}
         >
-            {/* glow */}
             <Box
                 sx={{
                     position: "absolute",
-
                     top: -140,
                     right: -140,
-
                     width: 320,
                     height: 320,
-
                     borderRadius: "50%",
-
                     background: `radial-gradient(circle, ${alpha(
                         theme.palette.primary.main,
                         0.16
                     )}, transparent 72%)`,
-
                     pointerEvents: "none",
-
                     filter: "blur(10px)",
                 }}
             />
@@ -101,22 +106,16 @@ const CreateBoardModal = ({
                 spacing={4}
                 sx={{
                     position: "relative",
-
                     height: "100%",
-
                     p: 4,
-
-                    justifyContent:
-                        "space-between",
+                    justifyContent: "space-between",
                 }}
             >
-                {/* top */}
                 <Box>
                     <Box
                         sx={{
                             display: "flex",
-                            alignItems:
-                                "flex-start",
+                            alignItems: "flex-start",
                             justifyContent:
                                 "space-between",
                         }}
@@ -125,16 +124,10 @@ const CreateBoardModal = ({
                             sx={{
                                 width: 54,
                                 height: 54,
-
-                                borderRadius:
-                                    "18px",
-
+                                borderRadius: "18px",
                                 display: "flex",
-                                alignItems:
-                                    "center",
-                                justifyContent:
-                                    "center",
-
+                                alignItems: "center",
+                                justifyContent: "center",
                                 background:
                                     theme.palette.mode ===
                                         "dark"
@@ -146,15 +139,11 @@ const CreateBoardModal = ({
                                             0.14
                                         )
                                         : "#FFF1F3",
-
                                 color:
-                                    theme
-                                        .palette
-                                        .primary
-                                        .main,
+                                    theme.palette.primary.main,
                             }}
                         >
-                            <SpaceDashboardOutlined />
+                            <TaskAltOutlined />
                         </Box>
 
                         <Box
@@ -162,40 +151,20 @@ const CreateBoardModal = ({
                             sx={{
                                 width: 40,
                                 height: 40,
-
-                                borderRadius:
-                                    "12px",
-
+                                borderRadius: "12px",
                                 display: "flex",
-                                alignItems:
-                                    "center",
-                                justifyContent:
-                                    "center",
-
+                                alignItems: "center",
+                                justifyContent: "center",
                                 cursor: "pointer",
-
                                 color:
-                                    theme
-                                        .palette
-                                        .text
-                                        .secondary,
-
+                                    theme.palette.text.secondary,
                                 transition:
                                     "all 0.16s ease",
-
-                                "&:hover":
-                                {
+                                "&:hover": {
                                     background:
-                                        theme
-                                            .palette
-                                            .background
-                                            .paper,
-
+                                        theme.palette.background.paper,
                                     color:
-                                        theme
-                                            .palette
-                                            .text
-                                            .primary,
+                                        theme.palette.text.primary,
                                 },
                             }}
                         >
@@ -206,89 +175,101 @@ const CreateBoardModal = ({
                     <Typography
                         sx={{
                             mt: 3,
-
                             fontSize: 34,
                             fontWeight: 800,
-
-                            letterSpacing:
-                                "-0.05em",
+                            letterSpacing: "-0.05em",
                         }}
                     >
-                        Create board
+                        Create task
                     </Typography>
 
                     <Typography
                         sx={{
                             mt: 1.5,
-
                             fontSize: 15,
-
                             lineHeight: 1.8,
-
                             color:
                                 theme.palette.text.secondary,
                         }}
                     >
-                        Boards help organize tasks,
-                        workflows, and realtime team
-                        collaboration inside your
-                        workspace.
+                        Add a task to
+                        {columnName
+                            ? ` ${columnName}`
+                            : " this column"}
+                        .
                     </Typography>
                 </Box>
 
-                {/* form */}
                 <Stack spacing={3}>
                     <Box>
                         <Typography
                             sx={{
                                 mb: 1,
-
                                 fontSize: 14,
                                 fontWeight: 600,
-
                                 color:
                                     theme.palette.text.secondary,
                             }}
                         >
-                            Board name
+                            Task title
                         </Typography>
 
                         <AppInput
                             autoFocus
-                            placeholder="e.g. Product Sprint"
-                            value={name}
+                            placeholder="e.g. Draft onboarding flow"
+                            value={title}
                             onChange={(e) =>
-                                setName(
+                                setTitle(
                                     e.target.value
                                 )
                             }
                         />
                     </Box>
 
-                    {/* helper */}
+                    <Box>
+                        <Typography
+                            sx={{
+                                mb: 1,
+                                fontSize: 14,
+                                fontWeight: 600,
+                                color:
+                                    theme.palette.text.secondary,
+                            }}
+                        >
+                            Description
+                        </Typography>
+
+                        <AppInput
+                            multiline
+                            minRows={3}
+                            placeholder="Add a short note"
+                            value={description}
+                            onChange={(e) =>
+                                setDescription(
+                                    e.target.value
+                                )
+                            }
+                        />
+                    </Box>
+
                     <Box
                         sx={{
                             display: "flex",
                             alignItems: "center",
                             gap: 1.5,
-
                             p: 2,
-
                             borderRadius: "18px",
-
                             background:
                                 theme.palette.mode ===
                                     "dark"
                                     ? "rgba(255,255,255,0.04)"
                                     : theme.palette.background.paper,
-
                             border: `1px solid ${theme.palette.divider}`,
                         }}
                     >
                         <AutoAwesome
                             sx={{
                                 fontSize: 18,
-
                                 color:
                                     theme.palette.primary.main,
                             }}
@@ -297,26 +278,22 @@ const CreateBoardModal = ({
                         <Typography
                             sx={{
                                 fontSize: 13,
-
                                 lineHeight: 1.7,
-
                                 color:
                                     theme.palette.text.secondary,
                             }}
                         >
-                            Boards can later contain
-                            columns, tasks, realtime
-                            updates, and collaborative
-                            workflows.
+                            Tasks stay ordered inside
+                            columns and can move as the
+                            work changes.
                         </Typography>
                     </Box>
                 </Stack>
 
-                {/* actions */}
                 <Stack
                     direction="row"
                     spacing={1.5}
-                    justifyContent="flex-end"
+                    sx={{ justifyContent: "flex-end" }}
                 >
                     <AppButton
                         variant="outlined"
@@ -324,17 +301,13 @@ const CreateBoardModal = ({
                         sx={{
                             borderColor:
                                 theme.palette.divider,
-
                             color:
                                 theme.palette.text.primary,
-
                             background:
                                 theme.palette.background.paper,
-
                             "&:hover": {
                                 borderColor:
                                     theme.palette.divider,
-
                                 background:
                                     theme.palette.background.paper,
                             },
@@ -344,24 +317,24 @@ const CreateBoardModal = ({
                     </AppButton>
 
                     <AppButton
-                        onClick={
-                            handleCreateBoard
+                        onClick={handleCreateTask}
+                        disabled={
+                            createTaskMutation.isPending
                         }
                         sx={{
                             px: 3,
-
                             background:
                                 theme.palette.primary.main,
-
-                            color: "#fff",
-
+                            color: theme.palette.text.default,
                             "&:hover": {
                                 background:
                                     theme.palette.primary.dark,
                             },
                         }}
                     >
-                        Create board
+                        {createTaskMutation.isPending
+                            ? "Creating..."
+                            : "Create task"}
                     </AppButton>
                 </Stack>
             </Stack>
@@ -369,4 +342,4 @@ const CreateBoardModal = ({
     );
 };
 
-export default CreateBoardModal;
+export default CreateTaskModal;

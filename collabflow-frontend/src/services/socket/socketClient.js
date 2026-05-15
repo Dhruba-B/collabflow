@@ -42,11 +42,19 @@ class SocketService {
     }
 
     joinBoard(boardId) {
-        this.emit("join-board", boardId);
+        this.emit("board", boardId);
     }
 
     leaveBoard(boardId) {
         this.emit("leave-board", boardId);
+    }
+
+    joinWorkspace(workspaceId) {
+        this.emit("workspace", workspaceId);
+    }
+
+    leaveWorkspace(workspaceId) {
+        this.emit("leave-workspace", workspaceId);
     }
 }
 
