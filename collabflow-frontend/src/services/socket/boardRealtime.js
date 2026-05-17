@@ -13,6 +13,7 @@ const invalidateBoard = ({
 export const registerBoardRealtime = ({
     boardId,
     queryClient,
+    onSyncEvent,
 }) => {
     if (!boardId || !queryClient) {
         return () => {};
@@ -23,14 +24,24 @@ export const registerBoardRealtime = ({
     socketService.connect(token);
     socketService.emit("board", boardId);
 
-    const handleTaskEvent = () => {
+    const handleTaskEvent = (event) => {
+        onSyncEvent?.({
+            type: "task",
+            event,
+        });
+
         invalidateBoard({
             queryClient,
             boardId,
         });
     };
 
-    const handleColumnEvent = () => {
+    const handleColumnEvent = (event) => {
+        onSyncEvent?.({
+            type: "column",
+            event,
+        });
+
         invalidateBoard({
             queryClient,
             boardId,

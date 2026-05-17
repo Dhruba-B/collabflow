@@ -11,6 +11,7 @@ import {
     horizontalListSortingStrategy,
     SortableContext,
 } from "@dnd-kit/sortable";
+import { AnimatePresence, motion } from "framer-motion";
 
 import { Box, Chip, Stack, Typography } from "@mui/material";
 
@@ -71,6 +72,16 @@ const getTaskDropTarget = (over) => {
     return null;
 };
 
+const getSocketEntityIds = ({ type, event }) => {
+    const entity = type === "task" ? event?.task : event?.column;
+
+    if (Array.isArray(entity)) {
+        return entity.map((item) => item.id);
+    }
+
+    return entity?.id ? [entity.id] : [];
+};
+
 const BoardPage = () => {
     const theme = useTheme();
 
@@ -101,6 +112,13 @@ const BoardPage = () => {
     const [openCreateColumn, setOpenCreateColumn] = useState(false);
 
     const [selectedColumn, setSelectedColumn] = useState(null);
+    const [isDraggingBoard, setIsDraggingBoard] = useState(false);
+    const [syncSignal, setSyncSignal] = useState({
+        active: false,
+        ids: [],
+        type: null,
+        version: 0,
+    });
 
     const columns = board?.columns || [];
 
@@ -210,6 +228,8 @@ const BoardPage = () => {
     };
 
     const handleDragEnd = ({ active, over }) => {
+        setIsDraggingBoard(false);
+
         if (!over || active.id === over.id) {
             return;
         }
@@ -234,8 +254,34 @@ const BoardPage = () => {
         return registerBoardRealtime({
             boardId,
             queryClient,
+            onSyncEvent: ({ type, event }) => {
+                setSyncSignal((currentSignal) => ({
+                    active: true,
+                    ids: getSocketEntityIds({
+                        type,
+                        event,
+                    }),
+                    type,
+                    version: currentSignal.version + 1,
+                }));
+            },
         });
     }, [boardId, queryClient]);
+
+    useEffect(() => {
+        if (!syncSignal.active) {
+            return undefined;
+        }
+
+        const timeoutId = window.setTimeout(() => {
+            setSyncSignal((currentSignal) => ({
+                ...currentSignal,
+                active: false,
+            }));
+        }, 850);
+
+        return () => window.clearTimeout(timeoutId);
+    }, [syncSignal.active, syncSignal.version]);
 
     return (
         <Box
@@ -460,7 +506,9 @@ const BoardPage = () => {
                             <DndContext
                                 sensors={sensors}
                                 collisionDetection={closestCorners}
+                                onDragStart={() => setIsDraggingBoard(true)}
                                 onDragEnd={handleDragEnd}
+                                onDragCancel={() => setIsDraggingBoard(false)}
                             >
                                 <SortableContext
                                     items={columns.map(
@@ -468,23 +516,64 @@ const BoardPage = () => {
                                     )}
                                     strategy={horizontalListSortingStrategy}
                                 >
-                                    {columns.map((column) => (
-                                        <SortableColumn
-                                            key={column.id}
-                                            boardId={boardId}
-                                            column={column}
-                                            deleteColumnMutation={
-                                                deleteColumnMutation
-                                            }
-                                            deleteTaskMutation={
-                                                deleteTaskMutation
-                                            }
-                                            onOpenCreateTask={
-                                                handleOpenCreateTask
-                                            }
-                                            theme={theme}
-                                        />
-                                    ))}
+                                    <AnimatePresence initial={false}>
+                                        {columns.map((column) => (
+                                            <motion.div
+                                                key={column.id}
+                                                layout={
+                                                    syncSignal.active &&
+                                                    !isDraggingBoard
+                                                }
+                                                initial={{
+                                                    opacity: 0,
+                                                    scale: 0.98,
+                                                }}
+                                                animate={{
+                                                    opacity: 1,
+                                                    scale: 1,
+                                                }}
+                                                exit={{
+                                                    opacity: 0,
+                                                    scale: 0.98,
+                                                }}
+                                                transition={{
+                                                    layout: {
+                                                        type: "spring",
+                                                        stiffness: 360,
+                                                        damping: 34,
+                                                    },
+                                                    opacity: {
+                                                        duration: 0.16,
+                                                    },
+                                                    scale: {
+                                                        duration: 0.16,
+                                                    },
+                                                }}
+                                                style={{
+                                                    display: "flex",
+                                                }}
+                                            >
+                                                <SortableColumn
+                                                    boardId={boardId}
+                                                    column={column}
+                                                    deleteColumnMutation={
+                                                        deleteColumnMutation
+                                                    }
+                                                    deleteTaskMutation={
+                                                        deleteTaskMutation
+                                                    }
+                                                    onOpenCreateTask={
+                                                        handleOpenCreateTask
+                                                    }
+                                                    syncSignal={syncSignal}
+                                                    isDraggingBoard={
+                                                        isDraggingBoard
+                                                    }
+                                                    theme={theme}
+                                                />
+                                            </motion.div>
+                                        ))}
+                                    </AnimatePresence>
                                 </SortableContext>
                             </DndContext>
                         )}
