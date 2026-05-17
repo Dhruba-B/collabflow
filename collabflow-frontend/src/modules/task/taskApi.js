@@ -53,3 +53,14 @@ export const moveTask = async ({
 
     return data;
 };
+
+export const reorderTasks = async ({
+    tasks,
+}) => {
+    const { data } = await api.put(
+        "/task/reorder",
+        { tasks }
+    );
+
+    return data;
+};

@@ -33,3 +33,14 @@ export const deleteColumn = async ({
 
     return data;
 };
+
+export const reorderColumns = async ({
+    columns,
+}) => {
+    const { data } = await api.put(
+        "/column/reorder",
+        { columns }
+    );
+
+    return data;
+};

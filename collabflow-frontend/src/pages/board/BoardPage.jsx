@@ -1,24 +1,75 @@
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
+import {
+    closestCorners,
+    DndContext,
+    PointerSensor,
+    useSensor,
+    useSensors,
+} from "@dnd-kit/core";
+import {
+    horizontalListSortingStrategy,
+    SortableContext,
+} from "@dnd-kit/sortable";
 
 import { Box, Chip, Stack, Typography } from "@mui/material";
 
 import { useTheme } from "@mui/material/styles";
 
-import { Add, BoltOutlined, DeleteOutlined } from "@mui/icons-material";
+import { Add, BoltOutlined } from "@mui/icons-material";
 
 import { useParams } from "react-router-dom";
 
 import { AppButton, AppCard, ThemeToggle } from "../../components";
-import { formatDistanceToNow } from "date-fns";
 import Rail from "../../components/rail/Rail";
 import useThemeStore from "../../store/themeStore";
 import { useBoard } from "../../modules/board/boardHooks";
-import { useDeleteColumn } from "../../modules/column/columnHooks";
-import { useDeleteTask } from "../../modules/task/taskHooks";
+import {
+    useDeleteColumn,
+    useReorderColumn,
+} from "../../modules/column/columnHooks";
+import {
+    useDeleteTask,
+    useMoveTask,
+    useReorderTask,
+} from "../../modules/task/taskHooks";
 import CreateColumnModal from "../../modules/column/components/CreateColumnModal";
 import CreateTaskModal from "../../modules/task/components/CreateTaskModal";
 import { registerBoardRealtime } from "../../services/socket/boardRealtime";
+import SortableColumn from "./components/SortableColumn";
+import {
+    findColumnByTaskId,
+    findTaskIndex,
+} from "../../utils/dnd/moveTaskBetweenColumns";
+import {
+    reorderArray,
+    withSequentialPositions,
+} from "../../utils/dnd/reorderArray";
+
+const getDragData = (entry) => entry?.data?.current;
+
+const getTaskDropTarget = (over) => {
+    const overData = getDragData(over);
+
+    if (overData?.type === "task") {
+        return {
+            columnId: overData.columnId,
+            taskId: overData.taskId,
+        };
+    }
+
+    if (
+        overData?.type === "columnDrop" ||
+        overData?.type === "column"
+    ) {
+        return {
+            columnId: overData.columnId,
+            taskId: null,
+        };
+    }
+
+    return null;
+};
 
 const BoardPage = () => {
     const theme = useTheme();
@@ -35,6 +86,17 @@ const BoardPage = () => {
         useDeleteColumn();
 
     const deleteTaskMutation = useDeleteTask();
+    const moveTaskMutation = useMoveTask();
+    const reorderTaskMutation = useReorderTask();
+    const reorderColumnMutation = useReorderColumn();
+
+    const sensors = useSensors(
+        useSensor(PointerSensor, {
+            activationConstraint: {
+                distance: 6,
+            },
+        })
+    );
 
     const [openCreateColumn, setOpenCreateColumn] = useState(false);
 
@@ -48,6 +110,124 @@ const BoardPage = () => {
 
     const handleCloseCreateTask = () => {
         setSelectedColumn(null);
+    };
+
+    const handleColumnDragEnd = (activeColumnId, overColumnId) => {
+        if (activeColumnId === overColumnId) {
+            return;
+        }
+
+        const activeIndex = columns.findIndex(
+            (column) => column.id === activeColumnId
+        );
+        const overIndex = columns.findIndex(
+            (column) => column.id === overColumnId
+        );
+
+        if (activeIndex < 0 || overIndex < 0) {
+            return;
+        }
+
+        const orderedColumns = withSequentialPositions(
+            reorderArray(columns, activeIndex, overIndex)
+        );
+
+        reorderColumnMutation.mutate({
+            boardId,
+            columns: orderedColumns.map((column) => ({
+                id: column.id,
+                position: column.position,
+            })),
+        });
+    };
+
+    const handleTaskDragEnd = (active, over) => {
+        const activeData = getDragData(active);
+        const taskId = activeData?.taskId;
+        const sourceColumn =
+            columns.find(
+                (column) => column.id === activeData?.columnId
+            ) || findColumnByTaskId(columns, taskId);
+        const target = getTaskDropTarget(over);
+        const targetColumn = columns.find(
+            (column) => column.id === target?.columnId
+        );
+
+        if (!taskId || !sourceColumn || !targetColumn) {
+            return;
+        }
+
+        const sourceTasks = sourceColumn.tasks || [];
+        const targetTasks = targetColumn.tasks || [];
+        const sourceIndex = findTaskIndex(sourceTasks, taskId);
+        const targetTaskIndex = target.taskId
+            ? findTaskIndex(targetTasks, target.taskId)
+            : -1;
+
+        if (sourceIndex < 0) {
+            return;
+        }
+
+        if (sourceColumn.id === targetColumn.id) {
+            const targetIndex =
+                targetTaskIndex >= 0
+                    ? targetTaskIndex
+                    : sourceTasks.length - 1;
+
+            if (sourceIndex === targetIndex) {
+                return;
+            }
+
+            const orderedTasks = withSequentialPositions(
+                reorderArray(sourceTasks, sourceIndex, targetIndex)
+            );
+
+            reorderTaskMutation.mutate({
+                boardId,
+                columnId: sourceColumn.id,
+                taskId,
+                tasks: orderedTasks.map((task) => ({
+                    id: task.id,
+                    position: task.position,
+                })),
+            });
+
+            return;
+        }
+
+        const targetIndex =
+            targetTaskIndex >= 0
+                ? targetTaskIndex
+                : targetTasks.length;
+
+        moveTaskMutation.mutate({
+            boardId,
+            taskId,
+            sourceColumnId: sourceColumn.id,
+            targetColumnId: targetColumn.id,
+            position: targetIndex,
+        });
+    };
+
+    const handleDragEnd = ({ active, over }) => {
+        if (!over || active.id === over.id) {
+            return;
+        }
+
+        const activeData = getDragData(active);
+        const overData = getDragData(over);
+
+        if (activeData?.type === "column" && overData?.type === "column") {
+            handleColumnDragEnd(
+                activeData.columnId,
+                overData.columnId
+            );
+            return;
+        }
+
+        if (activeData?.type === "task") {
+            handleTaskDragEnd(active, over);
+        }
     };
 
     useEffect(() => {
@@ -276,294 +456,38 @@ const BoardPage = () => {
                             </AppCard>
                         )}
 
-                        {!isLoading &&
-                            columns.map((column) => {
-                                const tasks = column.tasks || [];
-
-                                return (
-                                    <Box
-                                        key={column.id}
-                                        sx={{
-                                            width: 340,
-
-                                            display: "flex",
-                                            flexDirection: "column",
-
-                                            borderRadius: "20px",
-
-                                            background: theme.palette.background.paper,
-
-                                            border: `1px solid ${theme.palette.divider}`,
-
-                                            overflow: "hidden",
-
-                                            flexShrink: 0,
-                                        }}
-                                    >
-                                        {/* column header */}
-                                        <Box
-                                            sx={{
-                                                px: 2,
-                                                py: 1.8,
-
-                                                borderBottom: `1px solid ${theme.palette.divider}`,
-
-                                                display: "flex",
-                                                alignItems: "center",
-                                                justifyContent: "space-between",
-                                            }}
-                                        >
-                                            <Stack direction="row" spacing={1} alignItems="center">
-                                                <Typography
-                                                    sx={{
-                                                        fontSize: 15,
-                                                        fontWeight: 700,
-                                                    }}
-                                                >
-                                                    {column.name}
-                                                </Typography>
-
-                                                <Chip
-                                                    label={tasks.length}
-                                                    size="small"
-                                                    sx={{
-                                                        height: 22,
-
-                                                        borderRadius: "999px",
-
-                                                        background:
-                                                            theme.palette.mode === "dark"
-                                                                ? "rgba(255,255,255,0.05)"
-                                                                : theme.palette.background.default,
-                                                    }}
-                                                />
-                                            </Stack>
-
-                                            <Box
-                                                onClick={() =>
-                                                    deleteColumnMutation.mutate(
-                                                        {
-                                                            columnId:
-                                                                column.id,
-                                                            boardId,
-                                                        }
-                                                    )
-                                                }
-                                                sx={{
-                                                    width: 34,
-                                                    height: 34,
-
-                                                    borderRadius: "10px",
-
-                                                    display: "flex",
-                                                    alignItems: "center",
-                                                    justifyContent: "center",
-
-                                                    cursor: "pointer",
-
-                                                    transition: "all 0.16s ease",
-
-                                                    color:
-                                                        theme.palette.primary.main,
-
-                                                    "&:hover": {
-                                                        background:
-                                                            theme.palette.primary.soft,
-                                                        color:
-                                                            theme.palette.primary.dark,
-                                                    },
-                                                }}
-                                            >
-                                                <DeleteOutlined fontSize="small" />
-                                            </Box>
-                                        </Box>
-
-                                        {/* tasks */}
-                                        <Box
-                                            sx={{
-                                                flex: 1,
-
-                                                p: 1.5,
-
-                                                overflowY: "auto",
-                                            }}
-                                        >
-                                            <Stack spacing={1.5}>
-                                                {tasks.map((task) => (
-                                                    <AppCard
-                                                        key={task.id}
-                                                        sx={{
-                                                            p: 2,
-
-                                                            cursor: "pointer",
-
-                                                            background: theme.palette.background.default,
-
-                                                            transition: "all 0.18s ease",
-
-                                                            "&:hover": {
-                                                                transform: "translateY(-2px)",
-
-                                                                borderColor: theme.palette.primary.main,
-                                                            },
-                                                        }}
-                                                    >
-                                                        <Box
-                                                            sx={{
-                                                                display:
-                                                                    "flex",
-                                                                alignItems:
-                                                                    "flex-start",
-                                                                justifyContent:
-                                                                    "space-between",
-                                                                gap: 1,
-                                                            }}
-                                                        >
-                                                            <Typography
-                                                                sx={{
-                                                                    fontSize: 14,
-                                                                    fontWeight: 600,
-
-                                                                    lineHeight: 1.6,
-                                                                }}
-                                                            >
-                                                                {task.title}
-                                                            </Typography>
-
-                                                            <Box
-                                                                onClick={(event) => {
-                                                                    event.stopPropagation();
-
-                                                                    deleteTaskMutation.mutate(
-                                                                        {
-                                                                            taskId:
-                                                                                task.id,
-                                                                            boardId,
-                                                                        }
-                                                                    );
-                                                                }}
-                                                                sx={{
-                                                                    width: 28,
-                                                                    height: 28,
-                                                                    borderRadius:
-                                                                        "10px",
-                                                                    display:
-                                                                        "flex",
-                                                                    alignItems:
-                                                                        "center",
-                                                                    justifyContent:
-                                                                        "center",
-                                                                    flexShrink: 0,
-                                                                    color:
-                                                                        theme
-                                                                            .palette
-                                                                            .primary
-                                                                            .main,
-                                                                    transition:
-                                                                        "all 0.16s ease",
-
-                                                                    "&:hover":
-                                                                    {
-                                                                        background:
-                                                                            theme
-                                                                                .palette
-                                                                                .primary
-                                                                                .soft,
-                                                                        color:
-                                                                            theme
-                                                                                .palette
-                                                                                .primary
-                                                                                .dark,
-                                                                    },
-                                                                }}
-                                                            >
-                                                                <DeleteOutlined fontSize="small" />
-                                                            </Box>
-                                                        </Box>
-
-                                                        {task.description && (
-                                                            <Typography
-                                                                sx={{
-                                                                    mt: 1,
-                                                                    fontSize: 13,
-                                                                    lineHeight: 1.6,
-                                                                    color: theme.palette.text.secondary,
-                                                                }}
-                                                            >
-                                                                {task.description}
-                                                            </Typography>
-                                                        )}
-
-                                                        <Typography
-                                                            sx={{
-                                                                mt: 1.5,
-                                                                fontSize: 11,
-                                                                color: theme.palette.text.secondary,
-                                                            }}
-                                                        >
-                                                            Updated{" "}
-                                                            {formatDistanceToNow(
-                                                                new Date(task?.createdAt),
-                                                                {
-                                                                    addSuffix: true,
-                                                                }
-                                                            )}
-                                                        </Typography>
-                                                    </AppCard>
-                                                ))}
-
-                                                {/* add task */}
-                                                <Box
-                                                    onClick={() => handleOpenCreateTask(column)}
-                                                    sx={{
-                                                        p: 2,
-
-                                                        borderRadius: "16px",
-
-                                                        border: `1px dashed ${theme.palette.divider}`,
-
-                                                        display: "flex",
-
-                                                        alignItems: "center",
-                                                        justifyContent: "center",
-
-                                                        cursor: "pointer",
-
-                                                        color: theme.palette.text.secondary,
-
-                                                        transition: "all 0.18s ease",
-
-                                                        "&:hover": {
-                                                            borderColor: theme.palette.primary.main,
-
-                                                            color: theme.palette.primary.main,
-
-                                                            background: theme.palette.primary.soft,
-                                                        },
-                                                    }}
-                                                >
-                                                    <Stack
-                                                        direction="row"
-                                                        spacing={1}
-                                                        alignItems="center"
-                                                    >
-                                                        <Add fontSize="small" />
-
-                                                        <Typography
-                                                            sx={{
-                                                                fontSize: 14,
-                                                                fontWeight: 600,
-                                                            }}
-                                                        >
-                                                            Add task
-                                                        </Typography>
-                                                    </Stack>
-                                                </Box>
-                                            </Stack>
-                                        </Box>
-                                    </Box>
-                                );
-                            })}
+                        {!isLoading && columns.length > 0 && (
+                            <DndContext
+                                sensors={sensors}
+                                collisionDetection={closestCorners}
+                                onDragEnd={handleDragEnd}
+                            >
+                                <SortableContext
+                                    items={columns.map(
+                                        (column) => `column:${column.id}`
+                                    )}
+                                    strategy={horizontalListSortingStrategy}
+                                >
+                                    {columns.map((column) => (
+                                        <SortableColumn
+                                            key={column.id}
+                                            boardId={boardId}
+                                            column={column}
+                                            deleteColumnMutation={
+                                                deleteColumnMutation
+                                            }
+                                            deleteTaskMutation={
+                                                deleteTaskMutation
+                                            }
+                                            onOpenCreateTask={
+                                                handleOpenCreateTask
+                                            }
+                                            theme={theme}
+                                        />
+                                    ))}
+                                </SortableContext>
+                            </DndContext>
+                        )}
                     </Box>
                 </Box>
             </Box>
