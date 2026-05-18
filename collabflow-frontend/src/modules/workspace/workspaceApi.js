@@ -13,7 +13,8 @@ export const createWorkspace = async (
 ) => {
     const { data } = await api.post(
         "/workspace",
-        payload
+        payload,
+        { silentSnackbar: true }
     );
 
     return data;

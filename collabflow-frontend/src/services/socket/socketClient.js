@@ -6,7 +6,7 @@ class SocketService {
     connect(token) {
         if (this.socket?.connected) return;
 
-        this.socket = io("https://collabflow-luhs.onrender.com", {
+        this.socket = io("http://localhost:5000", {
             auth: {
                 token,
             },

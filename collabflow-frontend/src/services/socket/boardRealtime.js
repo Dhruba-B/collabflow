@@ -1,4 +1,5 @@
 import { boardKeys } from "../../modules/board/boardKeys";
+import { showInfoSnackbar } from "../../store/snackbarStore";
 import { socketService } from "./socketClient";
 
 const invalidateBoard = ({
@@ -29,6 +30,9 @@ export const registerBoardRealtime = ({
             type: "task",
             event,
         });
+        showInfoSnackbar("Board updated from realtime sync", {
+            duration: 2600,
+        });
 
         invalidateBoard({
             queryClient,
@@ -40,6 +44,9 @@ export const registerBoardRealtime = ({
         onSyncEvent?.({
             type: "column",
             event,
+        });
+        showInfoSnackbar("Board columns synced", {
+            duration: 2600,
         });
 
         invalidateBoard({

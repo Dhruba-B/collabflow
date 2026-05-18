@@ -1,19 +1,23 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import {
     closestCorners,
     DndContext,
+    DragOverlay,
+    KeyboardSensor,
     PointerSensor,
+    TouchSensor,
     useSensor,
     useSensors,
 } from "@dnd-kit/core";
 import {
     horizontalListSortingStrategy,
     SortableContext,
+    sortableKeyboardCoordinates,
 } from "@dnd-kit/sortable";
 import { AnimatePresence, motion } from "framer-motion";
 
-import { Box, Chip, Stack, Typography } from "@mui/material";
+import { alpha, Box, Chip, Stack, Typography } from "@mui/material";
 
 import { useTheme } from "@mui/material/styles";
 
@@ -46,6 +50,7 @@ import {
     reorderArray,
     withSequentialPositions,
 } from "../../utils/dnd/reorderArray";
+import useTouchOptimizedDnd from "../../utils/dnd/useTouchOptimizedDnd";
 
 const getDragData = (entry) => entry?.data?.current;
 
@@ -72,6 +77,20 @@ const getTaskDropTarget = (over) => {
     return null;
 };
 
+const getColumnDropTarget = (over) => {
+    const overData = getDragData(over);
+
+    if (
+        overData?.type === "column" ||
+        overData?.type === "columnDrop" ||
+        overData?.type === "task"
+    ) {
+        return overData.columnId;
+    }
+
+    return null;
+};
+
 const getSocketEntityIds = ({ type, event }) => {
     const entity = type === "task" ? event?.task : event?.column;
 
@@ -84,6 +103,7 @@ const getSocketEntityIds = ({ type, event }) => {
 
 const BoardPage = () => {
     const theme = useTheme();
+    const isTouchOptimizedDnd = useTouchOptimizedDnd();
 
     const { boardId } = useParams();
 
@@ -104,8 +124,17 @@ const BoardPage = () => {
     const sensors = useSensors(
         useSensor(PointerSensor, {
             activationConstraint: {
-                distance: 6,
+                distance: isTouchOptimizedDnd ? 14 : 3,
             },
+        }),
+        useSensor(TouchSensor, {
+            activationConstraint: {
+                delay: 220,
+                tolerance: 8,
+            },
+        }),
+        useSensor(KeyboardSensor, {
+            coordinateGetter: sortableKeyboardCoordinates,
         })
     );
 
@@ -113,6 +142,7 @@ const BoardPage = () => {
 
     const [selectedColumn, setSelectedColumn] = useState(null);
     const [isDraggingBoard, setIsDraggingBoard] = useState(false);
+    const [activeDrag, setActiveDrag] = useState(null);
     const [syncSignal, setSyncSignal] = useState({
         active: false,
         ids: [],
@@ -120,7 +150,26 @@ const BoardPage = () => {
         version: 0,
     });
 
-    const columns = board?.columns || [];
+    const columns = useMemo(() => board?.columns || [], [board?.columns]);
+    const activeDragPreview = useMemo(() => {
+        if (!activeDrag) {
+            return null;
+        }
+
+        if (activeDrag.type === "column") {
+            return columns.find(
+                (column) => column.id === activeDrag.columnId
+            );
+        }
+
+        if (activeDrag.type === "task") {
+            return columns
+                .flatMap((column) => column.tasks || [])
+                .find((task) => task.id === activeDrag.taskId);
+        }
+
+        return null;
+    }, [activeDrag, columns]);
 
     const handleOpenCreateTask = (column) => {
         setSelectedColumn(column);
@@ -229,25 +278,33 @@ const BoardPage = () => {
 
     const handleDragEnd = ({ active, over }) => {
         setIsDraggingBoard(false);
+        setActiveDrag(null);
 
         if (!over || active.id === over.id) {
             return;
         }
 
         const activeData = getDragData(active);
-        const overData = getDragData(over);
 
-        if (activeData?.type === "column" && overData?.type === "column") {
-            handleColumnDragEnd(
-                activeData.columnId,
-                overData.columnId
-            );
+        if (activeData?.type === "column") {
+            const overColumnId = getColumnDropTarget(over);
+
+            if (!overColumnId) {
+                return;
+            }
+
+            handleColumnDragEnd(activeData.columnId, overColumnId);
             return;
         }
 
         if (activeData?.type === "task") {
             handleTaskDragEnd(active, over);
         }
+    };
+
+    const handleDragStart = ({ active }) => {
+        setIsDraggingBoard(true);
+        setActiveDrag(getDragData(active) || null);
     };
 
     useEffect(() => {
@@ -293,6 +350,7 @@ const BoardPage = () => {
                 display: "flex",
 
                 overflow: "hidden",
+                userSelect: isDraggingBoard ? "none" : "auto",
             }}
         >
             {/* theme toggle */}
@@ -419,6 +477,14 @@ const BoardPage = () => {
                         overflowY: "hidden",
 
                         p: 2.5,
+                        overscrollBehaviorX: "contain",
+                        overscrollBehaviorY: "none",
+                        scrollBehavior: "smooth",
+                        scrollSnapType: isTouchOptimizedDnd
+                            ? "x proximity"
+                            : "none",
+                        touchAction: "pan-x pan-y",
+                        WebkitOverflowScrolling: "touch",
                     }}
                 >
                     <Box
@@ -506,9 +572,12 @@ const BoardPage = () => {
                             <DndContext
                                 sensors={sensors}
                                 collisionDetection={closestCorners}
-                                onDragStart={() => setIsDraggingBoard(true)}
+                                onDragStart={handleDragStart}
                                 onDragEnd={handleDragEnd}
-                                onDragCancel={() => setIsDraggingBoard(false)}
+                                onDragCancel={() => {
+                                    setIsDraggingBoard(false);
+                                    setActiveDrag(null);
+                                }}
                             >
                                 <SortableContext
                                     items={columns.map(
@@ -570,11 +639,133 @@ const BoardPage = () => {
                                                         isDraggingBoard
                                                     }
                                                     theme={theme}
+                                                    isTouchOptimizedDnd={
+                                                        isTouchOptimizedDnd
+                                                    }
                                                 />
                                             </motion.div>
                                         ))}
                                     </AnimatePresence>
                                 </SortableContext>
+                                <DragOverlay
+                                    adjustScale={false}
+                                    dropAnimation={{
+                                        duration: isTouchOptimizedDnd ? 180 : 140,
+                                        easing: "cubic-bezier(0.2, 0, 0, 1)",
+                                    }}
+                                >
+                                    {activeDrag?.type === "task" &&
+                                        activeDragPreview && (
+                                            <Box
+                                                sx={{
+                                                    width: 308,
+                                                    p: 2,
+                                                    borderRadius: "18px",
+                                                    background:
+                                                        theme.palette.background.default,
+                                                    border: `1px solid ${alpha(
+                                                        theme.palette.primary.main,
+                                                        0.42
+                                                    )}`,
+                                                    boxShadow:
+                                                        theme.palette.mode ===
+                                                        "dark"
+                                                            ? "0 22px 48px rgba(0,0,0,0.46)"
+                                                            : "0 22px 44px rgba(38,31,48,0.2)",
+                                                    transform: isTouchOptimizedDnd
+                                                        ? "scale(1.025)"
+                                                        : "scale(1.01)",
+                                                    touchAction: "none",
+                                                    userSelect: "none",
+                                                }}
+                                            >
+                                                <Typography
+                                                    sx={{
+                                                        fontSize: 14,
+                                                        fontWeight: 700,
+                                                        lineHeight: 1.6,
+                                                    }}
+                                                >
+                                                    {activeDragPreview.title}
+                                                </Typography>
+
+                                                {activeDragPreview.description && (
+                                                    <Typography
+                                                        sx={{
+                                                            mt: 1,
+                                                            fontSize: 13,
+                                                            lineHeight: 1.6,
+                                                            color: theme.palette
+                                                                .text.secondary,
+                                                        }}
+                                                    >
+                                                        {
+                                                            activeDragPreview.description
+                                                        }
+                                                    </Typography>
+                                                )}
+                                            </Box>
+                                        )}
+
+                                    {activeDrag?.type === "column" &&
+                                        activeDragPreview && (
+                                            <Box
+                                                sx={{
+                                                    width: 340,
+                                                    p: 2,
+                                                    borderRadius: "20px",
+                                                    background:
+                                                        theme.palette.background.paper,
+                                                    border: `1px solid ${alpha(
+                                                        theme.palette.primary.main,
+                                                        0.42
+                                                    )}`,
+                                                    boxShadow:
+                                                        theme.palette.mode ===
+                                                        "dark"
+                                                            ? "0 22px 52px rgba(0,0,0,0.5)"
+                                                            : "0 22px 48px rgba(38,31,48,0.22)",
+                                                    transform: isTouchOptimizedDnd
+                                                        ? "scale(1.02)"
+                                                        : "scale(1.01)",
+                                                    touchAction: "none",
+                                                    userSelect: "none",
+                                                }}
+                                            >
+                                                <Stack
+                                                    direction="row"
+                                                    spacing={1}
+                                                    alignItems="center"
+                                                >
+                                                    <Typography
+                                                        sx={{
+                                                            fontSize: 15,
+                                                            fontWeight: 800,
+                                                        }}
+                                                    >
+                                                        {activeDragPreview.name}
+                                                    </Typography>
+                                                    <Chip
+                                                        label={
+                                                            activeDragPreview
+                                                                .tasks
+                                                                ?.length || 0
+                                                        }
+                                                        size="small"
+                                                        sx={{
+                                                            height: 22,
+                                                            borderRadius:
+                                                                "999px",
+                                                            background:
+                                                                theme.palette
+                                                                    .background
+                                                                    .default,
+                                                        }}
+                                                    />
+                                                </Stack>
+                                            </Box>
+                                        )}
+                                </DragOverlay>
                             </DndContext>
                         )}
                     </Box>

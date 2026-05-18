@@ -15,7 +15,8 @@ export const createBoard = async (
 ) => {
     const { data } = await api.post(
         "/board",
-        payload
+        payload,
+        { silentSnackbar: true }
     );
 
     return data;

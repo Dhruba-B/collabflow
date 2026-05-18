@@ -12,6 +12,10 @@ import {
 } from "./workspaceApi";
 
 import { workspaceKeys } from "./workspaceKeys";
+import {
+    showErrorSnackbar,
+    showSuccessSnackbar,
+} from "../../store/snackbarStore";
 
 export const useWorkspaces = () => {
     return useQuery({
@@ -33,6 +37,12 @@ export const useCreateWorkspace =
                     queryKey:
                         workspaceKeys.all,
                 });
+
+                showSuccessSnackbar("Workspace created");
+            },
+
+            onError: () => {
+                showErrorSnackbar("Workspace could not be created");
             },
         });
     };

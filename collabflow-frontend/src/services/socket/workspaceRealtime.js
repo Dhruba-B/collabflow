@@ -1,5 +1,6 @@
 import { boardKeys } from "../../modules/board/boardKeys";
 import { workspaceKeys } from "../../modules/workspace/workspaceKeys";
+import { showInfoSnackbar } from "../../store/snackbarStore";
 import { socketService } from "./socketClient";
 
 export const registerWorkspaceListRealtime = ({
@@ -17,6 +18,10 @@ export const registerWorkspaceListRealtime = ({
     const handleWorkspaceEvent = () => {
         queryClient.invalidateQueries({
             queryKey: workspaceKeys.all,
+        });
+
+        showInfoSnackbar("Workspaces synced", {
+            duration: 2600,
         });
     };
 
@@ -56,6 +61,10 @@ export const registerWorkspaceRealtime = ({
         queryClient.invalidateQueries({
             queryKey:
                 workspaceKeys.detail(workspaceId),
+        });
+
+        showInfoSnackbar("Workspace boards synced", {
+            duration: 2600,
         });
     };
 

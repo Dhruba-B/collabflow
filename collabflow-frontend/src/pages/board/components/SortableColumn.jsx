@@ -1,6 +1,10 @@
 import { useEffect } from "react";
 import { alpha, Box, Chip, Stack, Typography } from "@mui/material";
-import { Add, DeleteOutlined } from "@mui/icons-material";
+import {
+    Add,
+    DeleteOutlined,
+    DragIndicator,
+} from "@mui/icons-material";
 import { useDroppable } from "@dnd-kit/core";
 import {
     SortableContext,
@@ -22,6 +26,7 @@ const SortableColumn = ({
     deleteColumnMutation,
     deleteTaskMutation,
     isDraggingBoard,
+    isTouchOptimizedDnd,
     onOpenCreateTask,
     syncSignal,
     theme,
@@ -32,6 +37,7 @@ const SortableColumn = ({
         attributes,
         isDragging,
         listeners,
+        setActivatorNodeRef,
         setNodeRef,
         transform,
         transition,
@@ -81,6 +87,8 @@ const SortableColumn = ({
         syncSignal?.ids,
         syncSignal?.type,
         syncSignal?.version,
+        theme.palette.primary.main,
+        theme.palette.primary.soft,
     ]);
 
     return (
@@ -95,6 +103,7 @@ const SortableColumn = ({
                 width: 340,
                 display: "flex",
                 flexShrink: 0,
+                scrollSnapAlign: isTouchOptimizedDnd ? "start" : "none",
             }}
         >
             <motion.div
@@ -150,16 +159,62 @@ const SortableColumn = ({
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "space-between",
-                            cursor: "grab",
+                            cursor: isTouchOptimizedDnd ? "default" : "grab",
+                            touchAction: isTouchOptimizedDnd
+                                ? "pan-x pan-y"
+                                : "none",
+                            userSelect: "none",
 
                             "&:active": {
-                                cursor: "grabbing",
+                                cursor: isTouchOptimizedDnd
+                                    ? "default"
+                                    : "grabbing",
                             },
                         }}
-                        {...attributes}
-                        {...listeners}
+                        {...(!isTouchOptimizedDnd ? attributes : {})}
+                        {...(!isTouchOptimizedDnd ? listeners : {})}
                     >
                         <Stack direction="row" spacing={1} alignItems="center">
+                            <Box
+                                ref={
+                                    isTouchOptimizedDnd
+                                        ? setActivatorNodeRef
+                                        : undefined
+                                }
+                                {...(isTouchOptimizedDnd ? attributes : {})}
+                                {...(isTouchOptimizedDnd ? listeners : {})}
+                                aria-label={`Drag ${column.name} column`}
+                                sx={{
+                                    width: 34,
+                                    height: 34,
+                                    ml: -0.75,
+                                    borderRadius: "10px",
+                                    display: isTouchOptimizedDnd
+                                        ? "flex"
+                                        : "none",
+                                    alignItems: "center",
+                                    justifyContent: "center",
+                                    flexShrink: 0,
+                                    color: theme.palette.text.secondary,
+                                    cursor: "grab",
+                                    touchAction: "none",
+                                    userSelect: "none",
+                                    transition: "all 0.16s ease",
+
+                                    "&:active": {
+                                        cursor: "grabbing",
+                                    },
+
+                                    "&:hover": {
+                                        background:
+                                            theme.palette.primary.soft,
+                                        color: theme.palette.primary.main,
+                                    },
+                                }}
+                            >
+                                <DragIndicator fontSize="small" />
+                            </Box>
+
                             <Typography
                                 sx={{
                                     fontSize: 15,
@@ -197,6 +252,7 @@ const SortableColumn = ({
                                 );
                             }}
                             onPointerDown={(event) => event.stopPropagation()}
+                            onTouchStart={(event) => event.stopPropagation()}
                             sx={{
                                 width: 34,
                                 height: 34,
@@ -232,6 +288,9 @@ const SortableColumn = ({
                             p: 1.5,
 
                             overflowY: "auto",
+                            overscrollBehavior: "contain",
+                            WebkitOverflowScrolling: "touch",
+                            touchAction: "pan-y",
                         }}
                     >
                         <SortableContext
@@ -248,6 +307,9 @@ const SortableColumn = ({
                                             isDraggingBoard={isDraggingBoard}
                                             syncSignal={syncSignal}
                                             theme={theme}
+                                            isTouchOptimizedDnd={
+                                                isTouchOptimizedDnd
+                                            }
                                             onDelete={(deletedTask) =>
                                                 deleteTaskMutation.mutate(
                                                     {

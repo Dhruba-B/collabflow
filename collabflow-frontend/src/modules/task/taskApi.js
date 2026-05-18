@@ -7,7 +7,8 @@ export const createTask = async ({
 }) => {
     const { data } = await api.post(
         `/column/${columnId}/task`,
-        { title, description }
+        { title, description },
+        { silentSnackbar: true }
     );
 
     return data;
@@ -48,7 +49,8 @@ export const moveTask = async ({
             sourceColumnId,
             targetColumnId,
             position,
-        }
+        },
+        { silentSnackbar: true }
     );
 
     return data;
@@ -59,7 +61,8 @@ export const reorderTasks = async ({
 }) => {
     const { data } = await api.put(
         "/task/reorder",
-        { tasks }
+        { tasks },
+        { silentSnackbar: true }
     );
 
     return data;

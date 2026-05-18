@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { alpha, Box, Typography } from "@mui/material";
-import { DeleteOutlined } from "@mui/icons-material";
+import { DeleteOutlined, DragIndicator } from "@mui/icons-material";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { formatDistanceToNow } from "date-fns";
@@ -12,6 +12,7 @@ const SortableTaskCard = ({
     task,
     columnId,
     isDraggingBoard,
+    isTouchOptimizedDnd,
     syncSignal,
     theme,
     onDelete,
@@ -21,6 +22,7 @@ const SortableTaskCard = ({
         attributes,
         isDragging,
         listeners,
+        setActivatorNodeRef,
         setNodeRef,
         transform,
         transition,
@@ -63,6 +65,7 @@ const SortableTaskCard = ({
         syncSignal?.type,
         syncSignal?.version,
         task.id,
+        theme.palette.primary.main,
     ]);
 
     return (
@@ -73,8 +76,12 @@ const SortableTaskCard = ({
                 transition,
                 transformOrigin: "50% 50%",
             }}
-            {...attributes}
-            {...listeners}
+            {...(!isTouchOptimizedDnd ? attributes : {})}
+            {...(!isTouchOptimizedDnd ? listeners : {})}
+            sx={{
+                touchAction: isTouchOptimizedDnd ? "pan-y" : "none",
+                userSelect: "none",
+            }}
         >
             <motion.div
                 layout={
@@ -105,35 +112,87 @@ const SortableTaskCard = ({
                         sx={{
                             p: 2,
 
-                            cursor: "grab",
+                            cursor: isTouchOptimizedDnd ? "default" : "grab",
 
                             background: theme.palette.background.default,
 
                             transition: "border-color 0.18s ease, background 0.18s ease",
+                            touchAction: isTouchOptimizedDnd
+                                ? "pan-y"
+                                : "none",
+                            userSelect: "none",
 
                             "&:active": {
-                                cursor: "grabbing",
+                                cursor: isTouchOptimizedDnd
+                                    ? "default"
+                                    : "grabbing",
                             },
 
                             "&:hover": {
                                 borderColor: theme.palette.primary.main,
                             },
                         }}
-                    >
-                        <Box
-                            sx={{
-                                display: "flex",
+                        >
+                            <Box
+                                sx={{
+                                    display: "flex",
                                 alignItems: "flex-start",
                                 justifyContent: "space-between",
-                                gap: 1,
-                            }}
-                        >
+                                    gap: 1,
+                                }}
+                            >
+                                <Box
+                                    ref={
+                                        isTouchOptimizedDnd
+                                            ? setActivatorNodeRef
+                                            : undefined
+                                    }
+                                    {...(isTouchOptimizedDnd
+                                        ? attributes
+                                        : {})}
+                                    {...(isTouchOptimizedDnd
+                                        ? listeners
+                                        : {})}
+                                    aria-label={`Drag ${task.title} task`}
+                                    sx={{
+                                        width: 30,
+                                        height: 30,
+                                        ml: -0.75,
+                                        mt: -0.25,
+                                        borderRadius: "10px",
+                                        display: isTouchOptimizedDnd
+                                            ? "flex"
+                                            : "none",
+                                        alignItems: "center",
+                                        justifyContent: "center",
+                                        flexShrink: 0,
+                                        color: theme.palette.text.secondary,
+                                        cursor: "grab",
+                                        touchAction: "none",
+                                        userSelect: "none",
+                                        transition: "all 0.16s ease",
+
+                                        "&:active": {
+                                            cursor: "grabbing",
+                                        },
+
+                                        "&:hover": {
+                                            background:
+                                                theme.palette.primary.soft,
+                                            color: theme.palette.primary.main,
+                                        },
+                                    }}
+                                >
+                                    <DragIndicator fontSize="small" />
+                                </Box>
+
                             <Typography
                                 sx={{
                                     fontSize: 14,
                                     fontWeight: 600,
 
                                     lineHeight: 1.6,
+                                    flex: 1,
                                 }}
                             >
                                 {task.title}
@@ -146,6 +205,7 @@ const SortableTaskCard = ({
                                     onDelete(task);
                                 }}
                                 onPointerDown={(event) => event.stopPropagation()}
+                                onTouchStart={(event) => event.stopPropagation()}
                                 sx={{
                                     width: 28,
                                     height: 28,

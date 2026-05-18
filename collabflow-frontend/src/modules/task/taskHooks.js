@@ -17,6 +17,12 @@ import {
     reorderTasksInColumn,
 } from "../../utils/dnd/moveTaskBetweenColumns";
 import { withSequentialPositions } from "../../utils/dnd/reorderArray";
+import {
+    showErrorSnackbar,
+    showInfoSnackbar,
+    showSuccessSnackbar,
+    showWarningSnackbar,
+} from "../../store/snackbarStore";
 
 const invalidateBoardDetail = (
     queryClient,
@@ -38,6 +44,12 @@ export const useCreateTask = () => {
                 queryClient,
                 variables.boardId
             );
+
+            showSuccessSnackbar("Task created");
+        },
+
+        onError: () => {
+            showErrorSnackbar("Task could not be created");
         },
     });
 };
@@ -117,6 +129,12 @@ export const useMoveTask = () => {
                     context.previousBoard
                 );
             }
+
+            showWarningSnackbar("Task move was reverted");
+        },
+
+        onSuccess: () => {
+            showInfoSnackbar("Task moved");
         },
 
         onSettled: (_data, _error, variables) => {
@@ -221,6 +239,8 @@ export const useReorderTask = () => {
                     context.previousBoard
                 );
             }
+
+            showWarningSnackbar("Task order was reverted");
         },
 
         onSettled: (_data, _error, variables) => {

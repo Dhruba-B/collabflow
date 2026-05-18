@@ -12,6 +12,10 @@ import {
 } from "./boardApi";
 
 import { boardKeys } from "./boardKeys";
+import {
+    showErrorSnackbar,
+    showSuccessSnackbar,
+} from "../../store/snackbarStore";
 
 export const useWorkspaceBoards = (
     workspaceId
@@ -45,6 +49,12 @@ export const useCreateBoard = () => {
                     variables.workspaceId
                 ),
             });
+
+            showSuccessSnackbar("Board created");
+        },
+
+        onError: () => {
+            showErrorSnackbar("Board could not be created");
         },
     });
 };

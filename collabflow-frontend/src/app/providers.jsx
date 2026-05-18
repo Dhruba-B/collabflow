@@ -13,6 +13,7 @@ import {
 } from "../theme";
 
 import useThemeStore from "../store/themeStore";
+import GlobalSnackbar from "../components/GlobalSnackbar";
 
 const queryClient = new QueryClient();
 
@@ -32,6 +33,8 @@ const Providers = ({ children }) => {
                     <CssBaseline />
 
                     {children}
+
+                    <GlobalSnackbar />
                 </ThemeProvider>
             </BrowserRouter>
         </QueryClientProvider>

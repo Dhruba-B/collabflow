@@ -12,6 +12,7 @@ import {
 
 import { boardKeys } from "../board/boardKeys";
 import { withSequentialPositions } from "../../utils/dnd/reorderArray";
+import { showWarningSnackbar } from "../../store/snackbarStore";
 
 const invalidateBoardDetail = (
     queryClient,
@@ -119,6 +120,8 @@ export const useReorderColumn = () => {
                     context.previousBoard
                 );
             }
+
+            showWarningSnackbar("Column order was reverted");
         },
 
         onSettled: (_data, _error, variables) => {

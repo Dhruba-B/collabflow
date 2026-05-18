@@ -39,7 +39,8 @@ export const reorderColumns = async ({
 }) => {
     const { data } = await api.put(
         "/column/reorder",
-        { columns }
+        { columns },
+        { silentSnackbar: true }
     );
 
     return data;
