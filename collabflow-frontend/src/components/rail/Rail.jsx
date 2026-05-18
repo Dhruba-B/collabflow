@@ -31,18 +31,65 @@ const Rail = ({
     return (
         <Box
             sx={{
-                width: 74,
+                width: {
+                    xs: "100%",
+                    md: 74,
+                },
+                height: {
+                    xs: "calc(64px + env(safe-area-inset-bottom))",
+                    md: "100vh",
+                },
 
-                borderRight: `1px solid ${theme.palette.divider}`,
+                borderRight: {
+                    xs: "none",
+                    md: `1px solid ${theme.palette.divider}`,
+                },
+                borderTop: {
+                    xs: `1px solid ${theme.palette.divider}`,
+                    md: "none",
+                },
 
                 display: "flex",
-                flexDirection: "column",
+                flexDirection: {
+                    xs: "row",
+                    md: "column",
+                },
                 alignItems: "center",
+                justifyContent: {
+                    xs: "center",
+                    md: "flex-start",
+                },
 
-                py: 2,
-                gap: 1.5,
+                py: {
+                    xs: 1,
+                    md: 2,
+                },
+                pb: {
+                    xs: "calc(8px + env(safe-area-inset-bottom))",
+                    md: 2,
+                },
+                px: {
+                    xs: 1.5,
+                    md: 0,
+                },
+                gap: {
+                    xs: 1,
+                    md: 1.5,
+                },
 
                 flexShrink: 0,
+                position: {
+                    xs: "fixed",
+                    md: "static",
+                },
+                left: 0,
+                right: 0,
+                bottom: 0,
+                zIndex: {
+                    xs: theme.zIndex.appBar,
+                    md: "auto",
+                },
+                background: theme.palette.background.default,
             }}
         >
 
@@ -55,6 +102,10 @@ const Rail = ({
                     height: 40,
 
                     mb: 1.5,
+                    display: {
+                        xs: "none",
+                        md: "block",
+                    },
                 }}
             />
 
@@ -74,8 +125,14 @@ const Rail = ({
                             }
                         }}
                         sx={{
-                            width: 46,
-                            height: 46,
+                            width: {
+                                xs: 48,
+                                md: 46,
+                            },
+                            height: {
+                                xs: 48,
+                                md: 46,
+                            },
 
                             borderRadius: "14px",
 

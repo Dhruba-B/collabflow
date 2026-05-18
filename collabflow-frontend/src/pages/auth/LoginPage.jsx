@@ -15,9 +15,6 @@ import { useState } from "react";
 import {
     GitHub,
     Google,
-    MoreHoriz,
-    Visibility,
-    VisibilityOff,
     VisibilityOffOutlined,
     VisibilityOutlined,
 } from "@mui/icons-material";
@@ -25,9 +22,7 @@ import {
 import AppCard from "../../components/card/AppCard";
 import AppButton from "../../components/button/AppButton";
 import AppInput from "../../components/input/AppInput";
-import useThemeStore from "../../store/themeStore";
 import useAuthStore from "../../store/authStore";
-import { ThemeToggle } from "../../components";
 import { useLogin } from "../../modules/auth/authHooks";
 
 const LoginPage = () => {
@@ -35,7 +30,6 @@ const LoginPage = () => {
     const [showPassword, setShowPassword] = useState(false);
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
-    const { mode, toggleTheme } = useThemeStore();
 
     const theme = useTheme();
 

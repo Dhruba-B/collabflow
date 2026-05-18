@@ -3,7 +3,6 @@ import { useMemo } from "react";
 import {
     Box,
     IconButton,
-    Tooltip,
 } from "@mui/material";
 
 import { useTheme } from "@mui/material/styles";
@@ -29,8 +28,22 @@ const ThemeToggle = ({
             sx={{
                 position: "fixed",
 
-                bottom: 22,
-                left: 8,
+                top: {
+                    xs: "calc(12px + env(safe-area-inset-top))",
+                    md: "auto",
+                },
+                right: {
+                    xs: 12,
+                    md: "auto",
+                },
+                bottom: {
+                    xs: "auto",
+                    md: 22,
+                },
+                left: {
+                    xs: "auto",
+                    md: 8,
+                },
 
                 zIndex: 9999,
                 p: 0.3,
@@ -67,8 +80,14 @@ const ThemeToggle = ({
             <IconButton
                 onClick={onToggle}
                 sx={{
-                    width: 50,
-                    height: 50,
+                    width: {
+                        xs: 44,
+                        md: 50,
+                    },
+                    height: {
+                        xs: 44,
+                        md: 50,
+                    },
 
                     borderRadius: "12px",
 

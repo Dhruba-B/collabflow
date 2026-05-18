@@ -4,7 +4,6 @@ import {
     Box,
     Slide,
     Snackbar,
-    Stack,
 } from "@mui/material";
 import { alpha, useTheme } from "@mui/material/styles";
 

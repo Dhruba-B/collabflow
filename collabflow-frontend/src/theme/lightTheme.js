@@ -37,10 +37,23 @@ const lightTheme = createTheme({
     components: {
         MuiCssBaseline: {
             styleOverrides: {
+                html: {
+                    width: "100%",
+                    minWidth: 320,
+                },
                 body: {
                     backgroundColor: lightColors.background,
                     color: lightColors.textPrimary,
                     fontFamily: "Geist, sans-serif",
+                    width: "100%",
+                    minWidth: 320,
+                    minHeight: "100dvh",
+                    overflowX: "hidden",
+                },
+                "#root": {
+                    width: "100%",
+                    minWidth: 320,
+                    minHeight: "100dvh",
                 },
             },
         },

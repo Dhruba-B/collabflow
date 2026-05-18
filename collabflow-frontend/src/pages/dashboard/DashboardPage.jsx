@@ -48,12 +48,20 @@ const DashboardPage = () => {
     return (
         <Box
             sx={{
-                minHeight: "100vh",
+                minHeight: "100dvh",
 
                 display: "flex",
+                flexDirection: {
+                    xs: "column",
+                    md: "row",
+                },
 
                 background:
                     theme.palette.background.default,
+                pb: {
+                    xs: "calc(64px + env(safe-area-inset-bottom))",
+                    md: 0,
+                },
             }}
         >
             {/* rail */}
@@ -62,11 +70,30 @@ const DashboardPage = () => {
             {/* sidebar */}
             <Box
                 sx={{
-                    width: 260,
+                    width: {
+                        xs: "100%",
+                        md: 260,
+                    },
 
-                    borderRight: `1px solid ${theme.palette.divider}`,
+                    borderRight: {
+                        xs: "none",
+                        md: `1px solid ${theme.palette.divider}`,
+                    },
+                    borderBottom: {
+                        xs: `1px solid ${theme.palette.divider}`,
+                        md: "none",
+                    },
 
-                    p: 2,
+                    p: {
+                        xs: 2,
+                        sm: 2.5,
+                        md: 2,
+                    },
+                    pt: {
+                        xs: "calc(16px + env(safe-area-inset-top))",
+                        md: 2,
+                    },
+                    flexShrink: 0,
                 }}
             >
                 <Typography
@@ -87,7 +114,32 @@ const DashboardPage = () => {
                     My Workspaces
                 </Typography>
 
-                <Stack spacing={1}>
+                <Stack
+                    direction={{
+                        xs: "row",
+                        md: "column",
+                    }}
+                    spacing={1}
+                    sx={{
+                        mx: {
+                            xs: -0.5,
+                            md: 0,
+                        },
+                        px: {
+                            xs: 0.5,
+                            md: 0,
+                        },
+                        overflowX: {
+                            xs: "auto",
+                            md: "visible",
+                        },
+                        WebkitOverflowScrolling: "touch",
+                        scrollSnapType: {
+                            xs: "x proximity",
+                            md: "none",
+                        },
+                    }}
+                >
                     {workspaces?.map((workspace) => (
                         <Box
                             key={workspace.id}
@@ -96,12 +148,17 @@ const DashboardPage = () => {
                             }}
                             sx={{
                                 p: 1.5,
+                                minWidth: {
+                                    xs: 220,
+                                    md: 0,
+                                },
 
                                 borderRadius: "14px",
 
                                 cursor: "pointer",
 
                                 transition: "all 0.18s ease",
+                                scrollSnapAlign: "start",
 
                                 "&:hover": {
                                     background:
@@ -186,7 +243,10 @@ const DashboardPage = () => {
                     startIcon={<Add />}
                     onClick={() => setOpenCreateWorkspace(true)}
                     sx={{
-                        mt: 3,
+                        mt: {
+                            xs: 2,
+                            md: 3,
+                        },
 
                         background:
                             theme.palette.primary.main,
@@ -208,24 +268,46 @@ const DashboardPage = () => {
                 sx={{
                     flex: 1,
 
-                    p: 4,
+                    width: "100%",
+                    minWidth: 0,
+
+                    p: {
+                        xs: 2,
+                        sm: 3,
+                        md: 4,
+                    },
                 }}
             >
                 {/* top */}
                 <Box
                     sx={{
                         display: "flex",
-                        alignItems: "center",
+                        alignItems: {
+                            xs: "flex-start",
+                            md: "center",
+                        },
                         justifyContent:
                             "space-between",
+                        flexDirection: {
+                            xs: "column",
+                            sm: "row",
+                        },
+                        gap: 1.5,
 
-                        mb: 4,
+                        mb: {
+                            xs: 2.5,
+                            md: 4,
+                        },
                     }}
                 >
                     <Box>
                         <Typography
                             sx={{
-                                fontSize: 34,
+                                fontSize: {
+                                    xs: 28,
+                                    sm: 32,
+                                    md: 34,
+                                },
                                 fontWeight: 800,
 
                                 letterSpacing:
@@ -238,6 +320,10 @@ const DashboardPage = () => {
                         <Typography
                             sx={{
                                 mt: 0.5,
+                                fontSize: {
+                                    xs: 14,
+                                    md: 16,
+                                },
 
                                 color:
                                     theme.palette.text.secondary,
@@ -252,10 +338,13 @@ const DashboardPage = () => {
                 {/* cards */}
                 <Box
                     sx={{
-                        display: "flex",
+                        display: "grid",
+                        gridTemplateColumns: {
+                            xs: "1fr",
+                            sm: "repeat(2, minmax(0, 1fr))",
+                            lg: "repeat(3, minmax(0, 1fr))",
+                        },
                         gap: 2,
-
-                        flexWrap: "wrap",
                     }}
                 >
                     {[
@@ -275,11 +364,12 @@ const DashboardPage = () => {
                         <AppCard
                             key={card.title}
                             sx={{
-                                flex: 1,
+                                minWidth: 0,
 
-                                minWidth: 220,
-
-                                p: 3,
+                                p: {
+                                    xs: 2,
+                                    md: 3,
+                                },
 
                                 background:
                                     theme.palette.background.paper,
@@ -300,7 +390,10 @@ const DashboardPage = () => {
                                 sx={{
                                     mt: 1,
 
-                                    fontSize: 36,
+                                    fontSize: {
+                                        xs: 30,
+                                        md: 36,
+                                    },
                                     fontWeight: 800,
 
                                     letterSpacing:
@@ -316,9 +409,15 @@ const DashboardPage = () => {
                 {/* activity */}
                 <AppCard
                     sx={{
-                        mt: 3,
+                        mt: {
+                            xs: 2,
+                            md: 3,
+                        },
 
-                        p: 3,
+                        p: {
+                            xs: 2,
+                            md: 3,
+                        },
 
                         background:
                             theme.palette.background.paper,

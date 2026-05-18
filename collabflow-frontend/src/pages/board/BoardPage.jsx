@@ -343,14 +343,22 @@ const BoardPage = () => {
     return (
         <Box
             sx={{
-                minHeight: "100vh",
+                minHeight: "100dvh",
 
                 background: theme.palette.background.default,
 
                 display: "flex",
+                flexDirection: {
+                    xs: "column",
+                    md: "row",
+                },
 
                 overflow: "hidden",
                 userSelect: isDraggingBoard ? "none" : "auto",
+                pb: {
+                    xs: "calc(64px + env(safe-area-inset-bottom))",
+                    md: 0,
+                },
             }}
         >
             {/* theme toggle */}
@@ -362,6 +370,11 @@ const BoardPage = () => {
             <Box
                 sx={{
                     flex: 1,
+                    minWidth: 0,
+                    minHeight: {
+                        xs: "calc(100dvh - 64px - env(safe-area-inset-bottom))",
+                        md: "100dvh",
+                    },
 
                     display: "flex",
                     flexDirection: "column",
@@ -372,15 +385,41 @@ const BoardPage = () => {
                 {/* topbar */}
                 <Box
                     sx={{
-                        height: 72,
+                        minHeight: {
+                            xs: "auto",
+                            md: 72,
+                        },
 
-                        px: 3,
+                        px: {
+                            xs: 2,
+                            sm: 2.5,
+                            md: 3,
+                        },
+                        py: {
+                            xs: 1.5,
+                            md: 0,
+                        },
+                        pt: {
+                            xs: "calc(12px + env(safe-area-inset-top))",
+                            md: 0,
+                        },
 
                         borderBottom: `1px solid ${theme.palette.divider}`,
 
                         display: "flex",
-                        alignItems: "center",
+                        alignItems: {
+                            xs: "stretch",
+                            md: "center",
+                        },
                         justifyContent: "space-between",
+                        flexDirection: {
+                            xs: "column",
+                            md: "row",
+                        },
+                        gap: {
+                            xs: 1.5,
+                            md: 2,
+                        },
 
                         flexShrink: 0,
                     }}
@@ -389,44 +428,71 @@ const BoardPage = () => {
                     <Box>
                         <Typography
                             sx={{
-                                fontSize: 26,
+                                fontSize: {
+                                    xs: 22,
+                                    sm: 24,
+                                    md: 26,
+                                },
                                 fontWeight: 800,
 
                                 letterSpacing: "-0.04em",
+                                overflowWrap: "anywhere",
                             }}
                         >
                             {isLoading ? "Loading board" : board?.name || "Board"}
                         </Typography>
 
-                        <Stack
-                            direction="row"
-                            spacing={1}
-                            alignItems="center"
-                            sx={{
-                                mb: 1, mt: 0.5,
-                            }}
-                        >
-                            <Chip
-                                label={`${board?.workspace?.name || ""}`}
-                                size="small"
+                        {board?.workspace?.name && (
+                            <Stack
+                                direction="row"
+                                spacing={1}
+                                alignItems="center"
                                 sx={{
-                                    height: 24,
-
-                                    borderRadius: "999px",
-
-                                    background:
-                                        theme.palette.mode === "dark"
-                                            ? "rgba(255,255,255,0.06)"
-                                            : theme.palette.background.paper,
-
-                                    border: `1px solid ${theme.palette.divider}`,
+                                    mb: 1,
+                                    mt: 0.5,
                                 }}
-                            />
-                        </Stack>
+                            >
+                                <Chip
+                                    label={board.workspace.name}
+                                    size="small"
+                                    sx={{
+                                        height: 24,
+
+                                        borderRadius: "999px",
+
+                                        background:
+                                            theme.palette.mode === "dark"
+                                                ? "rgba(255,255,255,0.06)"
+                                                : theme.palette.background.paper,
+
+                                        border: `1px solid ${theme.palette.divider}`,
+                                    }}
+                                />
+                            </Stack>
+                        )}
                     </Box>
 
                     {/* actions */}
-                    <Stack direction="row" spacing={1.5} alignItems="center">
+                    <Stack
+                        direction={{
+                            xs: "column",
+                            sm: "row",
+                        }}
+                        spacing={{
+                            xs: 1,
+                            sm: 1.5,
+                        }}
+                        alignItems={{
+                            xs: "stretch",
+                            sm: "center",
+                        }}
+                        sx={{
+                            width: {
+                                xs: "100%",
+                                md: "auto",
+                            },
+                        }}
+                    >
                         <Chip
                             icon={
                                 <BoltOutlined
@@ -438,6 +504,10 @@ const BoardPage = () => {
                             label="Realtime active"
                             sx={{
                                 borderRadius: "999px",
+                                alignSelf: {
+                                    xs: "flex-start",
+                                    sm: "center",
+                                },
 
                                 background:
                                     theme.palette.mode === "dark"
@@ -455,6 +525,10 @@ const BoardPage = () => {
                             onClick={() => setOpenCreateColumn(true)}
                             sx={{
                                 background: theme.palette.primary.main,
+                                width: {
+                                    xs: "100%",
+                                    sm: "auto",
+                                },
 
                                 color: theme.palette.text.default,
 
@@ -472,11 +546,16 @@ const BoardPage = () => {
                 <Box
                     sx={{
                         flex: 1,
+                        minHeight: 0,
 
                         overflowX: "auto",
                         overflowY: "hidden",
 
-                        p: 2.5,
+                        p: {
+                            xs: 1.5,
+                            sm: 2,
+                            md: 2.5,
+                        },
                         overscrollBehaviorX: "contain",
                         overscrollBehaviorY: "none",
                         scrollBehavior: "smooth",
@@ -491,7 +570,10 @@ const BoardPage = () => {
                         sx={{
                             display: "flex",
 
-                            gap: 2,
+                            gap: {
+                                xs: 1.5,
+                                md: 2,
+                            },
 
                             height: "100%",
 
@@ -501,9 +583,16 @@ const BoardPage = () => {
                         {isLoading && (
                             <AppCard
                                 sx={{
-                                    width: 340,
+                                    width: {
+                                        xs: "min(340px, calc(100vw - 32px))",
+                                        sm: 320,
+                                        md: 340,
+                                    },
                                     height: 160,
-                                    p: 2.5,
+                                    p: {
+                                        xs: 2,
+                                        md: 2.5,
+                                    },
                                     background: theme.palette.background.paper,
                                 }}
                             >
@@ -521,8 +610,15 @@ const BoardPage = () => {
                         {!isLoading && columns.length === 0 && (
                             <AppCard
                                 sx={{
-                                    width: 340,
-                                    p: 2.5,
+                                    width: {
+                                        xs: "min(340px, calc(100vw - 32px))",
+                                        sm: 320,
+                                        md: 340,
+                                    },
+                                    p: {
+                                        xs: 2,
+                                        md: 2.5,
+                                    },
                                     background: theme.palette.background.paper,
                                 }}
                             >
@@ -659,6 +755,7 @@ const BoardPage = () => {
                                             <Box
                                                 sx={{
                                                     width: 308,
+                                                    maxWidth: "calc(100vw - 32px)",
                                                     p: 2,
                                                     borderRadius: "18px",
                                                     background:
@@ -712,6 +809,7 @@ const BoardPage = () => {
                                             <Box
                                                 sx={{
                                                     width: 340,
+                                                    maxWidth: "calc(100vw - 32px)",
                                                     p: 2,
                                                     borderRadius: "20px",
                                                     background:

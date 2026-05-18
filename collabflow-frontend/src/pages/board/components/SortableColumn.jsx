@@ -100,7 +100,12 @@ const SortableColumn = ({
                 transformOrigin: "50% 50%",
             }}
             sx={{
-                width: 340,
+                "--column-width": {
+                    xs: "min(340px, calc(100vw - 32px))",
+                    sm: "320px",
+                    md: "340px",
+                },
+                width: "var(--column-width)",
                 display: "flex",
                 flexShrink: 0,
                 scrollSnapAlign: isTouchOptimizedDnd ? "start" : "none",
@@ -122,7 +127,7 @@ const SortableColumn = ({
                     },
                 }}
                 style={{
-                    width: 340,
+                    width: "var(--column-width)",
                     display: "flex",
                     flexShrink: 0,
                     transformOrigin: "50% 50%",
@@ -130,10 +135,17 @@ const SortableColumn = ({
             >
                 <Box
                     sx={{
-                        width: 340,
+                        width: "var(--column-width)",
+                        maxWidth: "100%",
 
                         display: "flex",
                         flexDirection: "column",
+                        maxHeight: {
+                            xs: "calc(100dvh - 202px - env(safe-area-inset-bottom))",
+                            sm: "calc(100dvh - 190px - env(safe-area-inset-bottom))",
+                            md: "calc(100dvh - 112px)",
+                        },
+                        minHeight: 0,
 
                         borderRadius: "20px",
 
@@ -151,8 +163,14 @@ const SortableColumn = ({
                     {/* column header */}
                     <Box
                         sx={{
-                            px: 2,
-                            py: 1.8,
+                            px: {
+                                xs: 1.5,
+                                md: 2,
+                            },
+                            py: {
+                                xs: 1.4,
+                                md: 1.8,
+                            },
 
                             borderBottom: `1px solid ${theme.palette.divider}`,
 
@@ -174,7 +192,14 @@ const SortableColumn = ({
                         {...(!isTouchOptimizedDnd ? attributes : {})}
                         {...(!isTouchOptimizedDnd ? listeners : {})}
                     >
-                        <Stack direction="row" spacing={1} alignItems="center">
+                        <Stack
+                            direction="row"
+                            spacing={1}
+                            alignItems="center"
+                            sx={{
+                                minWidth: 0,
+                            }}
+                        >
                             <Box
                                 ref={
                                     isTouchOptimizedDnd
@@ -219,6 +244,10 @@ const SortableColumn = ({
                                 sx={{
                                     fontSize: 15,
                                     fontWeight: 700,
+                                    minWidth: 0,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
                                 }}
                             >
                                 {column.name}
@@ -284,8 +313,12 @@ const SortableColumn = ({
                         ref={setTaskDropRef}
                         sx={{
                             flex: 1,
+                            minHeight: 0,
 
-                            p: 1.5,
+                            p: {
+                                xs: 1.25,
+                                md: 1.5,
+                            },
 
                             overflowY: "auto",
                             overscrollBehavior: "contain",
@@ -326,7 +359,10 @@ const SortableColumn = ({
                                 <Box
                                     onClick={() => onOpenCreateTask(column)}
                                     sx={{
-                                        p: 2,
+                                        p: {
+                                            xs: 1.5,
+                                            md: 2,
+                                        },
 
                                         borderRadius: "16px",
 

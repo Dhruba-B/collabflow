@@ -110,7 +110,10 @@ const SortableTaskCard = ({
                 >
                     <AppCard
                         sx={{
-                            p: 2,
+                            p: {
+                                xs: 1.5,
+                                md: 2,
+                            },
 
                             cursor: isTouchOptimizedDnd ? "default" : "grab",
 
@@ -136,9 +139,10 @@ const SortableTaskCard = ({
                             <Box
                                 sx={{
                                     display: "flex",
-                                alignItems: "flex-start",
-                                justifyContent: "space-between",
+                                    alignItems: "flex-start",
+                                    justifyContent: "space-between",
                                     gap: 1,
+                                    minWidth: 0,
                                 }}
                             >
                                 <Box
@@ -188,11 +192,16 @@ const SortableTaskCard = ({
 
                             <Typography
                                 sx={{
-                                    fontSize: 14,
+                                    fontSize: {
+                                        xs: 13.5,
+                                        md: 14,
+                                    },
                                     fontWeight: 600,
 
                                     lineHeight: 1.6,
                                     flex: 1,
+                                    minWidth: 0,
+                                    overflowWrap: "anywhere",
                                 }}
                             >
                                 {task.title}
@@ -207,8 +216,14 @@ const SortableTaskCard = ({
                                 onPointerDown={(event) => event.stopPropagation()}
                                 onTouchStart={(event) => event.stopPropagation()}
                                 sx={{
-                                    width: 28,
-                                    height: 28,
+                                    width: {
+                                        xs: 32,
+                                        md: 28,
+                                    },
+                                    height: {
+                                        xs: 32,
+                                        md: 28,
+                                    },
                                     borderRadius: "10px",
                                     display: "flex",
                                     alignItems: "center",
@@ -231,9 +246,13 @@ const SortableTaskCard = ({
                             <Typography
                                 sx={{
                                     mt: 1,
-                                    fontSize: 13,
+                                    fontSize: {
+                                        xs: 12.5,
+                                        md: 13,
+                                    },
                                     lineHeight: 1.6,
                                     color: theme.palette.text.secondary,
+                                    overflowWrap: "anywhere",
                                 }}
                             >
                                 {task.description}

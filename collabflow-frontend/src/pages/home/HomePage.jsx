@@ -21,10 +21,7 @@ import logo from "../../assets/collabflow.svg";
 import {
     AppButton,
     AppCard,
-    ThemeToggle,
 } from "../../components";
-
-import useThemeStore from "../../store/themeStore";
 
 const features = [
     {
@@ -51,9 +48,6 @@ const HomePage = () => {
     const navigate = useNavigate();
 
     const theme = useTheme();
-
-    const { mode, toggleTheme } =
-        useThemeStore();
 
     return (
         <Box
