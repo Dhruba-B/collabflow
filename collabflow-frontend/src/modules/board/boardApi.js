@@ -10,6 +10,14 @@ export const getWorkspaceBoards = async (
     return data?.data?.boards;
 };
 
+export const getSharedBoards = async () => {
+    const { data } = await api.get(
+        "/board/shared"
+    );
+
+    return data?.data?.boards;
+};
+
 export const createBoard = async (
     payload
 ) => {

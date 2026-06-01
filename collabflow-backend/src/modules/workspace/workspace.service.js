@@ -8,7 +8,7 @@ const createHttpError = (message, statusCode) => {
 };
 
 const emitWorkspaceEvent = ({ action, workspace }) => {
-    getIO().to("workspace-list").emit("workspace", {
+    getIO().to(`user:${workspace.ownerId}:workspace-list`).emit("workspace", {
         action,
         workspace,
     });
@@ -120,6 +120,14 @@ export const deleteWorkspace = async ({ workspaceId, ownerId }) => {
         });
 
         await tx.column.deleteMany({
+            where: {
+                boardId: {
+                    in: boardIds,
+                },
+            },
+        });
+
+        await tx.boardCollaborator.deleteMany({
             where: {
                 boardId: {
                     in: boardIds,

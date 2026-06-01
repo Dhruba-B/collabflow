@@ -22,6 +22,7 @@ import SortableTaskCard from "./SortableTaskCard";
 
 const SortableColumn = ({
     boardId,
+    canWrite,
     column,
     deleteColumnMutation,
     deleteTaskMutation,
@@ -43,6 +44,7 @@ const SortableColumn = ({
         transition,
     } = useSortable({
         id: `column:${column.id}`,
+        disabled: !canWrite,
         data: {
             type: "column",
             columnId: column.id,
@@ -189,8 +191,8 @@ const SortableColumn = ({
                                     : "grabbing",
                             },
                         }}
-                        {...(!isTouchOptimizedDnd ? attributes : {})}
-                        {...(!isTouchOptimizedDnd ? listeners : {})}
+                        {...(!isTouchOptimizedDnd && canWrite ? attributes : {})}
+                        {...(!isTouchOptimizedDnd && canWrite ? listeners : {})}
                     >
                         <Stack
                             direction="row"
@@ -206,15 +208,19 @@ const SortableColumn = ({
                                         ? setActivatorNodeRef
                                         : undefined
                                 }
-                                {...(isTouchOptimizedDnd ? attributes : {})}
-                                {...(isTouchOptimizedDnd ? listeners : {})}
+                                {...(isTouchOptimizedDnd && canWrite
+                                    ? attributes
+                                    : {})}
+                                {...(isTouchOptimizedDnd && canWrite
+                                    ? listeners
+                                    : {})}
                                 aria-label={`Drag ${column.name} column`}
                                 sx={{
                                     width: 34,
                                     height: 34,
                                     ml: -0.75,
                                     borderRadius: "10px",
-                                    display: isTouchOptimizedDnd
+                                    display: isTouchOptimizedDnd && canWrite
                                         ? "flex"
                                         : "none",
                                     alignItems: "center",
@@ -273,6 +279,10 @@ const SortableColumn = ({
                             onClick={(event) => {
                                 event.stopPropagation();
 
+                                if (!canWrite) {
+                                    return;
+                                }
+
                                 deleteColumnMutation.mutate(
                                     {
                                         columnId: column.id,
@@ -293,6 +303,7 @@ const SortableColumn = ({
                                 justifyContent: "center",
 
                                 cursor: "pointer",
+                                opacity: canWrite ? 1 : 0.42,
 
                                 transition: "all 0.16s ease",
 
@@ -343,13 +354,16 @@ const SortableColumn = ({
                                             isTouchOptimizedDnd={
                                                 isTouchOptimizedDnd
                                             }
+                                            canWrite={canWrite}
                                             onDelete={(deletedTask) =>
-                                                deleteTaskMutation.mutate(
-                                                    {
-                                                        taskId: deletedTask.id,
-                                                        boardId,
-                                                    }
-                                                )
+                                                canWrite
+                                                    ? deleteTaskMutation.mutate(
+                                                        {
+                                                            taskId: deletedTask.id,
+                                                            boardId,
+                                                        }
+                                                    )
+                                                    : undefined
                                             }
                                         />
                                     ))}
@@ -357,7 +371,7 @@ const SortableColumn = ({
 
                                 {/* add task */}
                                 <Box
-                                    onClick={() => onOpenCreateTask(column)}
+                                    onClick={() => canWrite && onOpenCreateTask(column)}
                                     sx={{
                                         p: {
                                             xs: 1.5,
@@ -373,7 +387,8 @@ const SortableColumn = ({
                                         alignItems: "center",
                                         justifyContent: "center",
 
-                                        cursor: "pointer",
+                                        cursor: canWrite ? "pointer" : "default",
+                                        opacity: canWrite ? 1 : 0.5,
 
                                         color: theme.palette.text.secondary,
 

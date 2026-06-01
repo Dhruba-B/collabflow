@@ -1,11 +1,12 @@
 import prisma from "../../../prisma/client.js";
 import { getIO } from "../../websocket/socket.js";
-
-const createHttpError = (message, statusCode) => {
-    const error = new Error(message);
-    error.statusCode = statusCode;
-    return error;
-};
+import {
+    assertBoardPermission,
+    assertWorkspaceOwner,
+    BOARD_PERMISSIONS,
+    createHttpError,
+    getBoardAccess,
+} from "../collaboration/permission.service.js";
 
 const emitBoardEvent = ({ workspaceId, action, board }) => {
     getIO().to(`workspace:${workspaceId}`).emit("board", {
@@ -31,42 +32,25 @@ const boardSelect = {
             columns: true,
         },
     },
+    updatedAt: true,
+    version: true,
 };
 
 const assertWorkspaceAccess = async ({ workspaceId, ownerId }, client = prisma) => {
-    const workspace = await client.workspace.findFirst({
-        where: {
-            id: workspaceId,
-            ownerId,
-        },
-        select: {
-            id: true,
-        },
-    });
-
-    if (!workspace) {
-        throw createHttpError("Workspace not found", 404);
-    }
-
-    return workspace;
+    return assertWorkspaceOwner({ workspaceId, userId: ownerId }, client);
 };
 
 const findBoardForOwner = async ({ boardId, ownerId }, client = prisma) => {
-    const board = await client.board.findFirst({
-        where: {
-            id: boardId,
-            workspace: {
-                ownerId,
-            },
-        },
+    await assertBoardPermission({
+        boardId,
+        userId: ownerId,
+        permission: BOARD_PERMISSIONS.DELETE,
+    }, client);
+
+    return client.board.findUnique({
+        where: { id: boardId },
         select: boardSelect,
     });
-
-    if (!board) {
-        throw createHttpError("Board not found", 404);
-    }
-
-    return board;
 };
 
 export const createBoard = async ({ name, workspaceId, ownerId }) => {
@@ -101,14 +85,40 @@ export const getBoardsByWorkspace = async ({ workspaceId, ownerId }) => {
     });
 };
 
-export const getBoardById = async ({ boardId, ownerId }) => {
-    const board = await prisma.board.findFirst({
-        where: {
-            id: boardId,
-            workspace: {
-                ownerId,
+export const getSharedBoards = async ({ userId }) => {
+    const collaborations = await prisma.boardCollaborator.findMany({
+        where: { userId },
+        orderBy: { updatedAt: "desc" },
+        select: {
+            role: true,
+            board: {
+                select: boardSelect,
             },
         },
+    });
+
+    return collaborations.map((collaboration) => ({
+        ...collaboration.board,
+        access: {
+            boardId: collaboration.board.id,
+            workspaceId: collaboration.board.workspaceId,
+            role: collaboration.role,
+            permissions:
+                collaboration.role === "EDITOR"
+                    ? ["READ", "WRITE"]
+                    : ["READ"],
+        },
+    }));
+};
+
+export const getBoardById = async ({ boardId, ownerId }) => {
+    const access = await getBoardAccess({
+        boardId,
+        userId: ownerId,
+    });
+
+    const board = await prisma.board.findUnique({
+        where: { id: boardId },
         select: {
             ...boardSelect,
             columns: {
@@ -118,6 +128,8 @@ export const getBoardById = async ({ boardId, ownerId }) => {
                     name: true,
                     position: true,
                     createdAt: true,
+                    updatedAt: true,
+                    version: true,
                     tasks: {
                         orderBy: [
                             { position: "asc" },
@@ -130,6 +142,8 @@ export const getBoardById = async ({ boardId, ownerId }) => {
                             position: true,
                             columnId: true,
                             createdAt: true,
+                            updatedAt: true,
+                            version: true,
                         },
                     },
                     _count: {
@@ -146,16 +160,28 @@ export const getBoardById = async ({ boardId, ownerId }) => {
         throw createHttpError("Board not found", 404);
     }
 
-    return board;
+    return {
+        ...board,
+        access,
+    };
 };
 
 export const updateBoard = async ({ boardId, ownerId, name }) => {
     const board = await prisma.$transaction(async (tx) => {
-        await findBoardForOwner({ boardId, ownerId }, tx);
+        await assertBoardPermission({
+            boardId,
+            userId: ownerId,
+            permission: BOARD_PERMISSIONS.DELETE,
+        }, tx);
 
         return tx.board.update({
             where: { id: boardId },
-            data: { name },
+            data: {
+                name,
+                version: {
+                    increment: 1,
+                },
+            },
             select: boardSelect,
         });
     });
@@ -182,6 +208,10 @@ export const deleteBoard = async ({ boardId, ownerId }) => {
         });
 
         await tx.column.deleteMany({
+            where: { boardId },
+        });
+
+        await tx.boardCollaborator.deleteMany({
             where: { boardId },
         });
 

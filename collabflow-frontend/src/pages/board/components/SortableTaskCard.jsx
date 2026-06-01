@@ -11,6 +11,7 @@ import { AppCard } from "../../../components";
 const SortableTaskCard = ({
     task,
     columnId,
+    canWrite,
     isDraggingBoard,
     isTouchOptimizedDnd,
     syncSignal,
@@ -28,6 +29,7 @@ const SortableTaskCard = ({
         transition,
     } = useSortable({
         id: `task:${task.id}`,
+        disabled: !canWrite,
         data: {
             type: "task",
             taskId: task.id,
@@ -76,8 +78,8 @@ const SortableTaskCard = ({
                 transition,
                 transformOrigin: "50% 50%",
             }}
-            {...(!isTouchOptimizedDnd ? attributes : {})}
-            {...(!isTouchOptimizedDnd ? listeners : {})}
+            {...(!isTouchOptimizedDnd && canWrite ? attributes : {})}
+            {...(!isTouchOptimizedDnd && canWrite ? listeners : {})}
             sx={{
                 touchAction: isTouchOptimizedDnd ? "pan-y" : "none",
                 userSelect: "none",
@@ -115,7 +117,10 @@ const SortableTaskCard = ({
                                 md: 2,
                             },
 
-                            cursor: isTouchOptimizedDnd ? "default" : "grab",
+                            cursor:
+                                isTouchOptimizedDnd || !canWrite
+                                    ? "default"
+                                    : "grab",
 
                             background: theme.palette.background.default,
 
@@ -151,10 +156,10 @@ const SortableTaskCard = ({
                                             ? setActivatorNodeRef
                                             : undefined
                                     }
-                                    {...(isTouchOptimizedDnd
+                                    {...(isTouchOptimizedDnd && canWrite
                                         ? attributes
                                         : {})}
-                                    {...(isTouchOptimizedDnd
+                                    {...(isTouchOptimizedDnd && canWrite
                                         ? listeners
                                         : {})}
                                     aria-label={`Drag ${task.title} task`}
@@ -164,7 +169,7 @@ const SortableTaskCard = ({
                                         ml: -0.75,
                                         mt: -0.25,
                                         borderRadius: "10px",
-                                        display: isTouchOptimizedDnd
+                                        display: isTouchOptimizedDnd && canWrite
                                             ? "flex"
                                             : "none",
                                         alignItems: "center",
@@ -211,7 +216,9 @@ const SortableTaskCard = ({
                                 onClick={(event) => {
                                     event.stopPropagation();
 
-                                    onDelete(task);
+                                    if (canWrite) {
+                                        onDelete(task);
+                                    }
                                 }}
                                 onPointerDown={(event) => event.stopPropagation()}
                                 onTouchStart={(event) => event.stopPropagation()}
@@ -230,6 +237,7 @@ const SortableTaskCard = ({
                                     justifyContent: "center",
                                     flexShrink: 0,
                                     color: theme.palette.primary.main,
+                                    opacity: canWrite ? 1 : 0.42,
                                     transition: "all 0.16s ease",
 
                                     "&:hover": {

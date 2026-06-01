@@ -8,6 +8,7 @@ import {
     createBoard,
     deleteBoard,
     getBoard,
+    getSharedBoards,
     getWorkspaceBoards,
 } from "./boardApi";
 
@@ -34,6 +35,13 @@ export const useBoard = (boardId) => {
         queryKey: boardKeys.detail(boardId),
         queryFn: () => getBoard(boardId),
         enabled: Boolean(boardId),
+    });
+};
+
+export const useSharedBoards = () => {
+    return useQuery({
+        queryKey: boardKeys.shared(),
+        queryFn: getSharedBoards,
     });
 };
 

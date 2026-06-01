@@ -1,11 +1,10 @@
 import prisma from "../../../prisma/client.js";
 import { getIO } from "../../websocket/socket.js";
-
-const createHttpError = (message, statusCode) => {
-    const error = new Error(message);
-    error.statusCode = statusCode;
-    return error;
-};
+import {
+    assertBoardPermission,
+    BOARD_PERMISSIONS,
+    createHttpError,
+} from "../collaboration/permission.service.js";
 
 const emitColumnEvent = ({ boardId, action, column }) => {
     getIO().to(`board:${boardId}`).emit("column", {
@@ -20,6 +19,8 @@ const columnSelect = {
     position: true,
     boardId: true,
     createdAt: true,
+    updatedAt: true,
+    version: true,
     board: {
         select: {
             id: true,
@@ -42,34 +43,17 @@ const columnSelect = {
 };
 
 const assertBoardAccess = async ({ boardId, ownerId }, client = prisma) => {
-    const board = await client.board.findFirst({
-        where: {
-            id: boardId,
-            workspace: {
-                ownerId,
-            },
-        },
-        select: {
-            id: true,
-        },
-    });
-
-    if (!board) {
-        throw createHttpError("Board not found", 404);
-    }
-
-    return board;
+    return assertBoardPermission({
+        boardId,
+        userId: ownerId,
+        permission: BOARD_PERMISSIONS.READ,
+    }, client);
 };
 
 const findColumnForOwner = async ({ columnId, ownerId }, client = prisma) => {
     const column = await client.column.findFirst({
         where: {
             id: columnId,
-            board: {
-                workspace: {
-                    ownerId,
-                },
-            },
         },
         select: columnSelect,
     });
@@ -77,6 +61,12 @@ const findColumnForOwner = async ({ columnId, ownerId }, client = prisma) => {
     if (!column) {
         throw createHttpError("Column not found", 404);
     }
+
+    await assertBoardPermission({
+        boardId: column.boardId,
+        userId: ownerId,
+        permission: BOARD_PERMISSIONS.WRITE,
+    }, client);
 
     return column;
 };
@@ -97,14 +87,23 @@ const normalizeBoardColumnPositions = async ({ boardId }, client) => {
     await Promise.all(
         columns.map((column, index) => client.column.update({
             where: { id: column.id },
-            data: { position: index + 1 },
+            data: {
+                position: index + 1,
+                version: {
+                    increment: 1,
+                },
+            },
         })),
     );
 };
 
 export const createColumn = async ({ name, boardId, ownerId }) => {
     const column = await prisma.$transaction(async (tx) => {
-        await assertBoardAccess({ boardId, ownerId }, tx);
+        await assertBoardPermission({
+            boardId,
+            userId: ownerId,
+            permission: BOARD_PERMISSIONS.WRITE,
+        }, tx);
 
         const columnCount = await tx.column.count({
             where: { boardId },
@@ -148,7 +147,12 @@ export const updateColumn = async ({ columnId, ownerId, name }) => {
 
         return tx.column.update({
             where: { id: columnId },
-            data: { name },
+            data: {
+                name,
+                version: {
+                    increment: 1,
+                },
+            },
             select: columnSelect,
         });
     });
@@ -195,11 +199,6 @@ export const reorderColumns = async ({ columns, ownerId }) => {
         const existingColumns = await tx.column.findMany({
             where: {
                 id: { in: columnIds },
-                board: {
-                    workspace: {
-                        ownerId,
-                    },
-                },
             },
             select: {
                 id: true,
@@ -217,14 +216,25 @@ export const reorderColumns = async ({ columns, ownerId }) => {
             throw createHttpError("Columns must belong to the same board", 400);
         }
 
+        const [boardId] = boardIds;
+
+        await assertBoardPermission({
+            boardId,
+            userId: ownerId,
+            permission: BOARD_PERMISSIONS.WRITE,
+        }, tx);
+
         await Promise.all(
             columns.map((column) => tx.column.update({
                 where: { id: column.id },
-                data: { position: column.position },
+                data: {
+                    position: column.position,
+                    version: {
+                        increment: 1,
+                    },
+                },
             })),
         );
-
-        const [boardId] = boardIds;
 
         return tx.column.findMany({
             where: { boardId },

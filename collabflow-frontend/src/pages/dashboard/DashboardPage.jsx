@@ -7,6 +7,7 @@ import {
 import {
     Add,
     DeleteOutlined,
+    FolderSharedOutlined,
 } from "@mui/icons-material";
 
 import { useTheme } from "@mui/material/styles";
@@ -20,6 +21,7 @@ import {
     useDeleteWorkspace,
     useWorkspaces,
 } from "../../modules/workspace/workspaceHooks";
+import { useSharedBoards } from "../../modules/board/boardHooks";
 import CreateWorkspaceModal from "../../modules/workspace/components/CreateWorkspaceModal";
 import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
@@ -32,6 +34,10 @@ const DashboardPage = () => {
     const navigate = useNavigate();
     const queryClient = useQueryClient();
     const { data: workspaces } = useWorkspaces();
+    const {
+        data: sharedBoards = [],
+        isLoading: sharedBoardsLoading,
+    } = useSharedBoards();
     const deleteWorkspaceMutation =
         useDeleteWorkspace();
     const [
@@ -405,6 +411,138 @@ const DashboardPage = () => {
                         </AppCard>
                     ))}
                 </Box>
+
+                <AppCard
+                    sx={{
+                        mt: {
+                            xs: 2,
+                            md: 3,
+                        },
+                        p: {
+                            xs: 2,
+                            md: 3,
+                        },
+                        background:
+                            theme.palette.background.paper,
+                    }}
+                >
+                    <Typography
+                        sx={{
+                            fontSize: 18,
+                            fontWeight: 700,
+                            mb: 2,
+                        }}
+                    >
+                        Shared boards
+                    </Typography>
+
+                    <Box
+                        sx={{
+                            display: "grid",
+                            gridTemplateColumns: {
+                                xs: "1fr",
+                                md: "repeat(2, minmax(0, 1fr))",
+                                xl: "repeat(3, minmax(0, 1fr))",
+                            },
+                            gap: 1.5,
+                        }}
+                    >
+                        {sharedBoardsLoading && (
+                            <Typography
+                                sx={{
+                                    color:
+                                        theme.palette.text.secondary,
+                                }}
+                            >
+                                Loading shared boards...
+                            </Typography>
+                        )}
+
+                        {!sharedBoardsLoading && sharedBoards.length === 0 && (
+                            <Typography
+                                sx={{
+                                    color:
+                                        theme.palette.text.secondary,
+                                }}
+                            >
+                                Boards shared with you will appear here.
+                            </Typography>
+                        )}
+
+                        {!sharedBoardsLoading && sharedBoards.map((board) => (
+                            <Box
+                                key={board.id}
+                                onClick={() =>
+                                    navigate(
+                                        `/workspace/${board.workspaceId}/board/${board.id}`
+                                    )
+                                }
+                                sx={{
+                                    p: 2,
+                                    borderRadius: "14px",
+                                    border: `1px solid ${theme.palette.divider}`,
+                                    cursor: "pointer",
+                                    minWidth: 0,
+                                    transition: "all 0.18s ease",
+                                    "&:hover": {
+                                        borderColor:
+                                            theme.palette.primary.main,
+                                        background:
+                                            theme.palette.background.default,
+                                    },
+                                }}
+                            >
+                                <Stack
+                                    direction="row"
+                                    spacing={1.25}
+                                    alignItems="flex-start"
+                                >
+                                    <Box
+                                        sx={{
+                                            width: 38,
+                                            height: 38,
+                                            borderRadius: "12px",
+                                            display: "flex",
+                                            alignItems: "center",
+                                            justifyContent: "center",
+                                            flexShrink: 0,
+                                            background:
+                                                theme.palette.primary.soft,
+                                            color:
+                                                theme.palette.primary.main,
+                                        }}
+                                    >
+                                        <FolderSharedOutlined fontSize="small" />
+                                    </Box>
+
+                                    <Box sx={{ minWidth: 0 }}>
+                                        <Typography
+                                            sx={{
+                                                fontSize: 15,
+                                                fontWeight: 700,
+                                                overflowWrap: "anywhere",
+                                            }}
+                                        >
+                                            {board.name}
+                                        </Typography>
+
+                                        <Typography
+                                            sx={{
+                                                mt: 0.5,
+                                                fontSize: 12,
+                                                color:
+                                                    theme.palette.text.secondary,
+                                                overflowWrap: "anywhere",
+                                            }}
+                                        >
+                                            {board.workspace?.name} · {board.access?.role}
+                                        </Typography>
+                                    </Box>
+                                </Stack>
+                            </Box>
+                        ))}
+                    </Box>
+                </AppCard>
 
                 {/* activity */}
                 <AppCard

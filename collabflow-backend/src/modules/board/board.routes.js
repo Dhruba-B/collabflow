@@ -5,6 +5,7 @@ import {
     deleteBoardController,
     getBoardController,
     getBoardsByWorkspaceController,
+    getSharedBoardsController,
     updateBoardController,
 } from "./board.controller.js";
 import { createColumnController } from "../column/column.controller.js";
@@ -22,6 +23,7 @@ router.post("/:boardId/column", (req, res, next) => {
 
     return createColumnController(req, res, next);
 });
+router.get("/shared", getSharedBoardsController);
 router.get("/workspace/:workspaceId", getBoardsByWorkspaceController);
 router.get("/:id", getBoardController);
 router.put("/:id", updateBoardController);

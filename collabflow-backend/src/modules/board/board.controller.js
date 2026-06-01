@@ -4,6 +4,7 @@ import {
     deleteBoard,
     getBoardById,
     getBoardsByWorkspace,
+    getSharedBoards,
     updateBoard,
 } from "./board.service.js";
 import {
@@ -43,6 +44,20 @@ export const getBoardsByWorkspaceController = asyncHandler(async (req, res) => {
     res.status(200).json({
         success: true,
         message: "Boards fetched successfully",
+        data: {
+            boards,
+        },
+    });
+});
+
+export const getSharedBoardsController = asyncHandler(async (req, res) => {
+    const boards = await getSharedBoards({
+        userId: req.user.id,
+    });
+
+    res.status(200).json({
+        success: true,
+        message: "Shared boards fetched successfully",
         data: {
             boards,
         },

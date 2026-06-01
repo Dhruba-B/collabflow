@@ -1,4 +1,5 @@
 import { boardKeys } from "../../modules/board/boardKeys";
+import { collaborationKeys } from "../../modules/collaboration/collaborationKeys";
 import { showInfoSnackbar } from "../../store/snackbarStore";
 import { socketService } from "./socketClient";
 
@@ -40,6 +41,12 @@ export const registerBoardRealtime = ({
         });
     };
 
+    const invalidateCollaborators = () => {
+        queryClient.invalidateQueries({
+            queryKey: collaborationKeys.board(boardId),
+        });
+    };
+
     const handleColumnEvent = (event) => {
         onSyncEvent?.({
             type: "column",
@@ -55,12 +62,26 @@ export const registerBoardRealtime = ({
         });
     };
 
+    const handleCollaboratorEvent = () => {
+        showInfoSnackbar("Board sharing updated", {
+            duration: 2600,
+        });
+
+        invalidateCollaborators();
+        invalidateBoard({
+            queryClient,
+            boardId,
+        });
+    };
+
     socketService.on("task", handleTaskEvent);
     socketService.on("column", handleColumnEvent);
+    socketService.on("collaborator", handleCollaboratorEvent);
 
     return () => {
         socketService.off("task", handleTaskEvent);
         socketService.off("column", handleColumnEvent);
+        socketService.off("collaborator", handleCollaboratorEvent);
         socketService.emit("leave-board", boardId);
     };
 };

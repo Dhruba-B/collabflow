@@ -21,7 +21,7 @@ import { alpha, Box, Chip, Stack, Typography } from "@mui/material";
 
 import { useTheme } from "@mui/material/styles";
 
-import { Add, BoltOutlined } from "@mui/icons-material";
+import { Add, BoltOutlined, GroupsOutlined, LockOutlined } from "@mui/icons-material";
 
 import { useParams } from "react-router-dom";
 
@@ -40,6 +40,7 @@ import {
 } from "../../modules/task/taskHooks";
 import CreateColumnModal from "../../modules/column/components/CreateColumnModal";
 import CreateTaskModal from "../../modules/task/components/CreateTaskModal";
+import CollaboratorsModal from "../../modules/collaboration/components/CollaboratorsModal";
 import { registerBoardRealtime } from "../../services/socket/boardRealtime";
 import SortableColumn from "./components/SortableColumn";
 import {
@@ -139,6 +140,7 @@ const BoardPage = () => {
     );
 
     const [openCreateColumn, setOpenCreateColumn] = useState(false);
+    const [openCollaborators, setOpenCollaborators] = useState(false);
 
     const [selectedColumn, setSelectedColumn] = useState(null);
     const [isDraggingBoard, setIsDraggingBoard] = useState(false);
@@ -151,6 +153,11 @@ const BoardPage = () => {
     });
 
     const columns = useMemo(() => board?.columns || [], [board?.columns]);
+    const boardPermissions = board?.access?.permissions || [];
+    const canWrite = boardPermissions.includes("WRITE");
+    const canManageCollaborators = boardPermissions.includes(
+        "MANAGE_COLLABORATORS"
+    );
     const activeDragPreview = useMemo(() => {
         if (!activeDrag) {
             return null;
@@ -172,6 +179,10 @@ const BoardPage = () => {
     }, [activeDrag, columns]);
 
     const handleOpenCreateTask = (column) => {
+        if (!canWrite) {
+            return;
+        }
+
         setSelectedColumn(column);
     };
 
@@ -180,6 +191,10 @@ const BoardPage = () => {
     };
 
     const handleColumnDragEnd = (activeColumnId, overColumnId) => {
+        if (!canWrite) {
+            return;
+        }
+
         if (activeColumnId === overColumnId) {
             return;
         }
@@ -209,6 +224,10 @@ const BoardPage = () => {
     };
 
     const handleTaskDragEnd = (active, over) => {
+        if (!canWrite) {
+            return;
+        }
+
         const activeData = getDragData(active);
         const taskId = activeData?.taskId;
         const sourceColumn =
@@ -284,6 +303,10 @@ const BoardPage = () => {
             return;
         }
 
+        if (!canWrite) {
+            return;
+        }
+
         const activeData = getDragData(active);
 
         if (activeData?.type === "column") {
@@ -303,6 +326,10 @@ const BoardPage = () => {
     };
 
     const handleDragStart = ({ active }) => {
+        if (!canWrite) {
+            return;
+        }
+
         setIsDraggingBoard(true);
         setActiveDrag(getDragData(active) || null);
     };
@@ -520,9 +547,54 @@ const BoardPage = () => {
                             }}
                         />
 
+                        {board?.access?.role && (
+                            <Chip
+                                icon={
+                                    !canWrite ? (
+                                        <LockOutlined
+                                            sx={{
+                                                fontSize: "16px !important",
+                                            }}
+                                        />
+                                    ) : undefined
+                                }
+                                label={board.access.role}
+                                sx={{
+                                    borderRadius: "999px",
+                                    alignSelf: {
+                                        xs: "flex-start",
+                                        sm: "center",
+                                    },
+                                    background:
+                                        theme.palette.background.paper,
+                                    border: `1px solid ${theme.palette.divider}`,
+                                }}
+                            />
+                        )}
+
+                        <AppButton
+                            startIcon={<GroupsOutlined />}
+                            onClick={() => setOpenCollaborators(true)}
+                            sx={{
+                                background: theme.palette.background.paper,
+                                border: `1px solid ${theme.palette.divider}`,
+                                color: theme.palette.text.primary,
+                                width: {
+                                    xs: "100%",
+                                    sm: "auto",
+                                },
+                                "&:hover": {
+                                    background: theme.palette.background.paper,
+                                },
+                            }}
+                        >
+                            Share
+                        </AppButton>
+
                         <AppButton
                             startIcon={<Add />}
                             onClick={() => setOpenCreateColumn(true)}
+                            disabled={!canWrite}
                             sx={{
                                 background: theme.palette.primary.main,
                                 width: {
@@ -649,6 +721,7 @@ const BoardPage = () => {
                                     <AppButton
                                         startIcon={<Add />}
                                         onClick={() => setOpenCreateColumn(true)}
+                                        disabled={!canWrite}
                                         sx={{
                                             alignSelf: "flex-start",
                                             background: theme.palette.primary.main,
@@ -727,6 +800,7 @@ const BoardPage = () => {
                                                     deleteTaskMutation={
                                                         deleteTaskMutation
                                                     }
+                                                    canWrite={canWrite}
                                                     onOpenCreateTask={
                                                         handleOpenCreateTask
                                                     }
@@ -874,6 +948,13 @@ const BoardPage = () => {
                 open={openCreateColumn}
                 onClose={() => setOpenCreateColumn(false)}
                 boardId={boardId}
+            />
+
+            <CollaboratorsModal
+                open={openCollaborators}
+                onClose={() => setOpenCollaborators(false)}
+                boardId={boardId}
+                canManage={canManageCollaborators}
             />
 
             <CreateTaskModal

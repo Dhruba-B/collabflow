@@ -7,6 +7,11 @@ export const boardKeys = {
         workspaceId,
     ],
 
+    shared: () => [
+        "board",
+        "shared",
+    ],
+
     detail: (boardId) => [
         "board",
         boardId,

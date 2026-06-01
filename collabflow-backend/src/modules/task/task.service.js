@@ -1,11 +1,10 @@
 import prisma from "../../../prisma/client.js";
 import { getIO } from "../../websocket/socket.js";
-
-const createHttpError = (message, statusCode) => {
-    const error = new Error(message);
-    error.statusCode = statusCode;
-    return error;
-};
+import {
+    assertBoardPermission,
+    BOARD_PERMISSIONS,
+    createHttpError,
+} from "../collaboration/permission.service.js";
 
 const emitTaskEvent = ({ boardId, action, task }) => {
     getIO().to(`board:${boardId}`).emit("task", {
@@ -21,6 +20,8 @@ const taskSelect = {
     position: true,
     columnId: true,
     createdAt: true,
+    updatedAt: true,
+    version: true,
     column: {
         select: {
             id: true,
@@ -46,15 +47,8 @@ const taskSelect = {
 };
 
 const assertColumnAccess = async ({ columnId, ownerId }, client = prisma) => {
-    const column = await client.column.findFirst({
-        where: {
-            id: columnId,
-            board: {
-                workspace: {
-                    ownerId,
-                },
-            },
-        },
+    const column = await client.column.findUnique({
+        where: { id: columnId },
         select: {
             id: true,
             boardId: true,
@@ -65,21 +59,18 @@ const assertColumnAccess = async ({ columnId, ownerId }, client = prisma) => {
         throw createHttpError("Column not found", 404);
     }
 
+    await assertBoardPermission({
+        boardId: column.boardId,
+        userId: ownerId,
+        permission: BOARD_PERMISSIONS.READ,
+    }, client);
+
     return column;
 };
 
 const findTaskForOwner = async ({ taskId, ownerId }, client = prisma) => {
-    const task = await client.task.findFirst({
-        where: {
-            id: taskId,
-            column: {
-                board: {
-                    workspace: {
-                        ownerId,
-                    },
-                },
-            },
-        },
+    const task = await client.task.findUnique({
+        where: { id: taskId },
         select: taskSelect,
     });
 
@@ -87,23 +78,14 @@ const findTaskForOwner = async ({ taskId, ownerId }, client = prisma) => {
         throw createHttpError("Task not found", 404);
     }
 
+    await assertBoardPermission({
+        boardId: task.column.boardId,
+        userId: ownerId,
+        permission: BOARD_PERMISSIONS.WRITE,
+    }, client);
+
     return task;
 };
-
-const getBoardIdForColumn = async (columnId, client = prisma) => {
-    const column = await client.column.findUnique({
-        where: { id: columnId },
-        select: {
-            boardId: true,
-        },
-    });
-
-    if (!column) {
-        throw createHttpError("Column not found", 404);
-    }
-
-    return column.boardId;
-}
 
 const getOrderedTasks = async ({ columnId }, client) => {
     return client.task.findMany({
@@ -125,7 +107,12 @@ const normalizeColumnTaskPositions = async ({ columnId }, client) => {
     await Promise.all(
         tasks.map((task, index) => client.task.update({
             where: { id: task.id },
-            data: { position: index + 1 },
+            data: {
+                position: index + 1,
+                version: {
+                    increment: 1,
+                },
+            },
         })),
     );
 };
@@ -142,14 +129,25 @@ const insertTaskAtPosition = async ({ taskId, columnId, position }, client) => {
     await Promise.all(
         orderedTaskIds.map((id, index) => client.task.update({
             where: { id },
-            data: { position: index + 1 },
+            data: {
+                position: index + 1,
+                version: {
+                    increment: 1,
+                },
+            },
         })),
     );
 };
 
 export const createTask = async ({ title, description, columnId, ownerId }) => {
     const task = await prisma.$transaction(async (tx) => {
-        await assertColumnAccess({ columnId, ownerId }, tx);
+        const column = await assertColumnAccess({ columnId, ownerId }, tx);
+
+        await assertBoardPermission({
+            boardId: column.boardId,
+            userId: ownerId,
+            permission: BOARD_PERMISSIONS.WRITE,
+        }, tx);
 
         const taskCount = await tx.task.count({
             where: { columnId },
@@ -191,7 +189,22 @@ export const getTasksByColumn = async ({ columnId, ownerId }) => {
 };
 
 export const getTaskById = async ({ taskId, ownerId }) => {
-    return findTaskForOwner({ taskId, ownerId });
+    const task = await prisma.task.findUnique({
+        where: { id: taskId },
+        select: taskSelect,
+    });
+
+    if (!task) {
+        throw createHttpError("Task not found", 404);
+    }
+
+    await assertBoardPermission({
+        boardId: task.column.boardId,
+        userId: ownerId,
+        permission: BOARD_PERMISSIONS.READ,
+    });
+
+    return task;
 };
 
 export const updateTask = async ({ taskId, ownerId, data }) => {
@@ -200,7 +213,12 @@ export const updateTask = async ({ taskId, ownerId, data }) => {
 
         return tx.task.update({
             where: { id: taskId },
-            data,
+            data: {
+                ...data,
+                version: {
+                    increment: 1,
+                },
+            },
             select: taskSelect,
         });
     });
@@ -263,6 +281,9 @@ export const moveTask = async ({
             data: {
                 columnId: targetColumnId,
                 position: 0,
+                version: {
+                    increment: 1,
+                },
             },
         });
 
@@ -297,17 +318,15 @@ export const reorderTasks = async ({ tasks, ownerId }) => {
         const existingTasks = await tx.task.findMany({
             where: {
                 id: { in: taskIds },
-                column: {
-                    board: {
-                        workspace: {
-                            ownerId,
-                        },
-                    },
-                },
             },
             select: {
                 id: true,
                 columnId: true,
+                column: {
+                    select: {
+                        boardId: true,
+                    },
+                },
             },
         });
 
@@ -321,10 +340,24 @@ export const reorderTasks = async ({ tasks, ownerId }) => {
             throw createHttpError("Tasks must belong to the same column", 400);
         }
 
+        const boardIds = new Set(existingTasks.map((task) => task.column.boardId));
+        const [boardId] = boardIds;
+
+        await assertBoardPermission({
+            boardId,
+            userId: ownerId,
+            permission: BOARD_PERMISSIONS.WRITE,
+        }, tx);
+
         await Promise.all(
             tasks.map((task) => tx.task.update({
                 where: { id: task.id },
-                data: { position: task.position },
+                data: {
+                    position: task.position,
+                    version: {
+                        increment: 1,
+                    },
+                },
             })),
         );
 

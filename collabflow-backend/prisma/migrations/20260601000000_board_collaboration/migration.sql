@@ -1,0 +1,27 @@
+CREATE TYPE "BoardRole" AS ENUM ('OWNER', 'EDITOR', 'VIEWER');
+
+ALTER TABLE "Board" ADD COLUMN "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE "Board" ADD COLUMN "version" INTEGER NOT NULL DEFAULT 1;
+
+ALTER TABLE "Column" ADD COLUMN "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE "Column" ADD COLUMN "version" INTEGER NOT NULL DEFAULT 1;
+
+ALTER TABLE "Task" ADD COLUMN "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;
+ALTER TABLE "Task" ADD COLUMN "version" INTEGER NOT NULL DEFAULT 1;
+
+CREATE TABLE "BoardCollaborator" (
+    "id" SERIAL NOT NULL,
+    "boardId" INTEGER NOT NULL,
+    "userId" INTEGER NOT NULL,
+    "role" "BoardRole" NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "BoardCollaborator_pkey" PRIMARY KEY ("id")
+);
+
+CREATE UNIQUE INDEX "BoardCollaborator_boardId_userId_key" ON "BoardCollaborator"("boardId", "userId");
+CREATE INDEX "BoardCollaborator_userId_idx" ON "BoardCollaborator"("userId");
+
+ALTER TABLE "BoardCollaborator" ADD CONSTRAINT "BoardCollaborator_boardId_fkey" FOREIGN KEY ("boardId") REFERENCES "Board"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
+ALTER TABLE "BoardCollaborator" ADD CONSTRAINT "BoardCollaborator_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
