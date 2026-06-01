@@ -28,6 +28,8 @@ CollabFlow enables teams to collaborate through realtime workspaces, boards, col
 * Realtime collaborative board updates
 * Dynamic kanban-style layout
 * Board-specific websocket rooms
+* Shared board access for collaborators
+* Dashboard discovery for boards shared with the signed-in user
 
 ## Columns & Tasks
 
@@ -40,10 +42,57 @@ CollabFlow enables teams to collaborate through realtime workspaces, boards, col
 ## Realtime Collaboration
 
 * Socket.IO powered synchronization
+* JWT-authenticated websocket connections
 * Realtime task updates
 * Realtime column updates
+* Realtime collaborator updates
 * Board room subscriptions
 * Live collaborative movement animations
+* Server-authoritative state with last-write-wins updates
+* Version and timestamp tracking on boards, columns, and tasks
+
+## Role-Based Permissions
+
+CollabFlow supports board-level collaborators with backend-enforced permissions.
+
+```txt
+OWNER
+- Full board access
+- Read, write, delete board, and manage collaborators
+
+EDITOR
+- View board
+- Create, edit, delete, move, and reorder board contents
+- Cannot manage collaborators
+- Cannot delete the board
+
+VIEWER
+- View board only
+- Cannot modify board contents
+```
+
+Collaborator permissions are enforced in backend services before board, column, task, and collaborator mutations. The UI also reflects the user's role by disabling write controls for viewers.
+
+## Shared Board Navigation
+
+Collaborators do not automatically own or see the workspace that contains a shared board. Instead, shared board access is listed on the dashboard.
+
+To open a board shared with you:
+
+```txt
+1. Log in with the collaborator account.
+2. Go to /dashboard.
+3. Find the board in the Shared boards section.
+4. Open it from there.
+```
+
+The direct route is:
+
+```txt
+/workspace/:workspaceId/board/:boardId
+```
+
+The board detail API accepts collaborator access, so a collaborator can open a shared board even if the workspace is not listed under "My Workspaces".
 
 ## UI/UX
 
@@ -137,6 +186,12 @@ module/
 
 ## TanStack Query
 
+The collaboration domain follows the same frontend module pattern under:
+
+```txt
+src/modules/collaboration/
+```
+
 Used for:
 
 * server state
@@ -168,6 +223,8 @@ Refetch
 UI Update
 ```
 
+Board socket subscriptions are permission-checked on the backend before a client can join `board:<boardId>`.
+
 ---
 
 # Routing Structure
@@ -190,22 +247,37 @@ UI Update
 ```txt
 workspace:<workspaceId>
 board:<boardId>
+user:<userId>:workspace-list
 ```
 
 ## Supported Realtime Events
 
 ```txt
-board:join
-board:leave
+board / join-board
+leave-board
+workspace
+leave-workspace
+workspace-list
+leave-workspace-list
 
-column:created
-column:updated
-column:deleted
+board
+column
+task
+collaborator
+board:error
+workspace:error
+```
 
-task:created
-task:updated
-task:moved
-task:deleted
+Event payloads include an `action` field such as:
+
+```txt
+created
+updated
+deleted
+moved
+reordered
+upserted
+removed
 ```
 
 ---
@@ -265,28 +337,53 @@ GET    /workspace/:workspaceId
 ## Boards
 
 ```txt
-GET    /workspace/:workspaceId/boards
-POST   /workspace/:workspaceId/boards
-GET    /board/:boardId
+GET    /board/workspace/:workspaceId
+GET    /board/shared
+POST   /board
+GET    /board/:id
+PUT    /board/:id
+PATCH  /board/:id
+DELETE /board/:id
 ```
+
+`GET /board/shared` returns boards where the authenticated user is an `EDITOR` or `VIEWER` collaborator.
+
+## Collaborators
+
+```txt
+GET    /collaboration/board/:boardId
+POST   /collaboration/board/:boardId
+PATCH  /collaboration/board/:boardId/:userId
+DELETE /collaboration/board/:boardId/:userId
+```
+
+Only board owners can add, update, or remove collaborators. Collaborators are added by user email with either `EDITOR` or `VIEWER` role.
 
 ## Columns
 
 ```txt
-POST   /board/:boardId/columns
-PATCH  /column/:columnId
-DELETE /column/:columnId
-PATCH  /column/:columnId/reorder
+GET    /column/board/:boardId
+POST   /board/:boardId/column
+POST   /column
+PUT    /column/reorder
+PUT    /column/:id
+PATCH  /column/:id
+DELETE /column/:id
 ```
 
 ## Tasks
 
 ```txt
-POST   /column/:columnId/tasks
-PATCH  /task/:taskId
-DELETE /task/:taskId
+GET    /task/column/:columnId
+POST   /column/:columnId/task
+POST   /task
+GET    /task/:id
+PUT    /task/:id
+PATCH  /task/:id
+DELETE /task/:id
+PUT    /task/move
 PATCH  /task/:taskId/move
-PATCH  /task/:taskId/reorder
+PUT    /task/reorder
 ```
 
 ---
@@ -353,6 +450,12 @@ CLIENT_URL=http://localhost:5173
 
 # Prisma Setup
 
+The collaboration implementation adds:
+
+* `BoardCollaborator`
+* `BoardRole`
+* `updatedAt` and `version` fields on boards, columns, and tasks
+
 ## Generate Prisma Client
 
 ```bash
@@ -363,6 +466,12 @@ npx prisma generate
 
 ```bash
 npx prisma migrate dev
+```
+
+For deployed environments, apply migrations with:
+
+```bash
+npm run db:migrate
 ```
 
 ---
